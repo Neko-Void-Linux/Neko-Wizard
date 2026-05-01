@@ -73,7 +73,6 @@ static void neko_app_card_init(NekoAppCard *self) {
     gtk_widget_set_vexpand(spacer, TRUE);
     gtk_box_append(GTK_BOX(self->box), spacer);
     
-    // Add clickable area
     GtkGesture *click_gesture = gtk_gesture_click_new();
     g_signal_connect(click_gesture, "pressed", G_CALLBACK(on_card_click), self);
     gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(click_gesture));
@@ -83,7 +82,7 @@ GtkWidget *neko_app_card_new(AppInfo *info) {
     NekoAppCard *card = g_object_new(NEKO_TYPE_APP_CARD, NULL);
     card->info = info;
     
-    char *rel_path = g_strdup_printf("resources/%s", info->icon_path);
+    char *rel_path = g_build_filename("resources", info->icon_path, NULL);
     char *full_path = get_resource_path(rel_path);
     
     gtk_image_set_from_file(GTK_IMAGE(card->icon_image), full_path);
@@ -91,9 +90,7 @@ GtkWidget *neko_app_card_new(AppInfo *info) {
     g_free(rel_path);
     g_free(full_path);
     
-    char *markup = g_markup_printf_escaped("<b>%s</b>", info->name);
-    gtk_label_set_markup(GTK_LABEL(card->name_label), markup);
-    g_free(markup);
+    gtk_label_set_text(GTK_LABEL(card->name_label), info->name);
     
     return GTK_WIDGET(card);
 }

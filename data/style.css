@@ -1,9 +1,7 @@
 window {
-    background-color: #282a36;
-    /* Dracula darkest bg */
-    color: #f8f8f2;
-    /* Dracula foreground */
-    font-family: 'Inter', 'Roboto', sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
 }
 
 headerbar {
@@ -13,89 +11,94 @@ headerbar {
 }
 
 .title-label {
-    font-weight: 800;
-    font-size: 1.2em;
+    font-weight: 700;
+    font-size: 1.1em;
     padding: 0 10px;
     color: #ffffff;
+    opacity: 0.9;
 }
 
-/* Welcome Page */
 .welcome-icon {
-    opacity: 0.9;
+    opacity: 0.85;
     margin-bottom: 24px;
-    filter: drop-shadow(0 0 16px rgba(94, 92, 230, 0.4));
+    filter: grayscale(20%) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
 }
 
 .welcome-title {
-    font-size: 2.5em;
-    font-weight: 900;
+    font-size: 2.2em;
+    font-weight: 800;
     color: #ffffff;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
 }
 
 .welcome-subtitle {
-    font-size: 1.2em;
-    color: #a1a1aa;
+    font-size: 1.1em;
+    color: #888888;
     margin-bottom: 32px;
 }
 
 .start-btn {
-    font-size: 1.2em;
-    padding: 12px 36px;
-    border-radius: 30px;
-    background: linear-gradient(135deg, #5e5ce6, #bf5af2);
-    color: white;
-    font-weight: bold;
-    border: none;
-    box-shadow: 0 8px 16px rgba(94, 92, 230, 0.3);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    font-size: 1.1em;
+    padding: 12px 32px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #121212;
+    font-weight: 700;
+    border: 1px solid #ffffff;
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
 }
 
 .start-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(94, 92, 230, 0.5);
+    background-color: #f0f0f0;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.15);
 }
 
-/* Apps Page */
+.start-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
 .page-header {
-    font-size: 1.8em;
-    font-weight: 800;
+    font-size: 1.6em;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: #ffffff;
 }
 
 .group-title {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #e4e4e7;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #a0a0a0;
 }
 
-/* Application Card */
 appcard {
-    background: #44475a;
-    /* Dracula current line/bg */
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    background: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 appcard:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    transform: translateY(-4px);
-    border-color: rgba(255, 255, 255, 0.1);
-    background: #6272a4;
-    /* Dracula comment/selection */
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.08);
+    background: #242424;
 }
 
 appcard.selected {
-    border-color: #5e5ce6;
-    background: rgba(94, 92, 230, 0.1);
-    box-shadow: 0 0 0 1px #5e5ce6, 0 8px 24px rgba(94, 92, 230, 0.2);
+    border-color: #4a90e2;
+    background: rgba(74, 144, 226, 0.08);
+    box-shadow: 0 0 0 1px #4a90e2, 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .card-title {
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #ffffff;
+    font-size: 1.05em;
+    font-weight: 600;
+    color: #e0e0e0;
     margin-top: 8px;
 }
 
@@ -105,30 +108,52 @@ appcard.selected {
 }
 
 appcard:hover .card-icon {
-    transform: scale(1.05);
+    transform: scale(1.03);
 }
 
 checkbutton {
     margin-top: 8px;
 }
 
-/* Install Button */
 .install-selected-btn {
-    border-radius: 20px;
-    font-weight: bold;
+    border-radius: 8px;
+    font-weight: 700;
     padding: 10px 24px;
-    background: #5e5ce6;
-    color: white;
+    background-color: #4a90e2;
+    color: #ffffff;
     border: none;
-    box-shadow: 0 4px 12px rgba(94, 92, 230, 0.3);
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2);
+    transition: all 0.2s ease;
 }
 
 .install-selected-btn:hover {
-    background: #6c6aea;
+    background-color: #357abd;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+.install-selected-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 4px rgba(74, 144, 226, 0.2);
+}
+
+button.suggested-action {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 10px 20px;
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+button.suggested-action:hover {
+    background-color: #333333;
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 .dim-label {
-    color: #a1a1aa;
+    color: #888888;
 }
 
 flowboxchild {
@@ -137,55 +162,91 @@ flowboxchild {
 }
 
 progressbar {
-    border-radius: 8px;
+    border-radius: 6px;
 }
 
 progressbar trough {
-    background-color: #44475a;
-    /* Dracula bg2 */
-    border-radius: 8px;
+    background-color: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
 }
 
 progressbar progress {
-    background: linear-gradient(90deg, #5e5ce6, #bf5af2);
-    border-radius: 8px;
+    background-color: #e0e0e0;
+    border-radius: 6px;
 }
 
-/* Light mode overrides */
 window.light-mode {
-    background-color: #f4f4f5;
-    color: #18181b;
+    background-color: #fcfcfc;
+    color: #1a1a1a;
 }
 
 window.light-mode .title-label,
 window.light-mode .welcome-title,
 window.light-mode .card-title,
-window.light-mode .page-header,
-window.light-mode .group-title {
-    color: #18181b;
+window.light-mode .page-header {
+    color: #111111;
 }
 
+window.light-mode .group-title,
 window.light-mode .welcome-subtitle,
 window.light-mode .dim-label {
-    color: #71717a;
+    color: #666666;
+}
+
+window.light-mode .start-btn {
+    background-color: #111111;
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+window.light-mode .start-btn:hover {
+    background-color: #222222;
 }
 
 window.light-mode appcard {
     background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 window.light-mode appcard:hover {
-    background: #fafafa;
+    background: #fdfdfd;
     border-color: rgba(0, 0, 0, 0.1);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 window.light-mode appcard.selected {
-    background: rgba(94, 92, 230, 0.05);
+    border-color: #0056b3;
+    background: rgba(0, 86, 179, 0.04);
+    box-shadow: 0 0 0 1px #0056b3, 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+window.light-mode .install-selected-btn {
+    background-color: #0056b3;
+    color: #ffffff;
+}
+
+window.light-mode .install-selected-btn:hover {
+    background-color: #004494;
+}
+
+window.light-mode button.suggested-action {
+    background-color: #f0f0f0;
+    color: #111111;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+window.light-mode button.suggested-action:hover {
+    background-color: #e4e4e4;
 }
 
 window.light-mode progressbar trough {
-    background-color: #e4e4e7;
+    background-color: #eeeeee;
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+window.light-mode progressbar progress {
+    background-color: #111111;
 }
