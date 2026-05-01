@@ -3,7 +3,7 @@
 
 static AppInfo apps[] = {
     // Gaming
-    {"Steam", "steam.png", "pkexec xbps-install -Syu void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree && pkexec xbps-install -Syu steam-udev-rules libGL-32bit libpulseaudio-32bit libtxc_dxtn-32bit mesa-dri mesa-dri-32bit && flatpak install flathub com.valvesoftware.Steam -y", GROUP_GAMING, FALSE, FALSE},
+    {"Steam", "steam.png", "pkexec xbps-install -Sy void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree && pkexec xbps-install -Sy steam-udev-rules libGL-32bit libpulseaudio-32bit libtxc_dxtn-32bit mesa-dri mesa-dri-32bit steam-nk", GROUP_GAMING, FALSE, FALSE},
     {"ProtonUp-Qt", "protonup-qt.png", "flatpak install flathub net.davidotek.pupgui2 -y", GROUP_GAMING, FALSE, FALSE},
     {"PortProton", "portproton.png", "pkexec xbps-install -Sy portproton", GROUP_GAMING, FALSE, FALSE},
     {"Heroic Games Launcher", "heroic.png", "pkexec xbps-install -Sy heroic-games", GROUP_GAMING, FALSE, FALSE},
