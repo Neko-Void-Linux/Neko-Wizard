@@ -1,0 +1,40 @@
+name: Build MiniMatugenJ
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: codeberg-small
+    container:
+      image: 'ghcr.io/void-linux/void-mklive:20250116R1'
+      options: --privileged
+      volumes:
+        - /dev:/dev
+      env:
+        PATH: '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/sbin:/usr/local/bin:/tmp/bin'
+
+    steps:
+      # Este paso debe ir PRIMERO y usar shell puro para evitar dependencias de Node
+      - name: Install Node.js and dependencies
+        run: |
+          xbps-install -Syu xbps
+          xbps-install -yu
+          xbps-install -y nodejs gcc make cmake meson ninja gtk4-devel pkg-config xxd sed coreutils tar
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compile project
+        run: meson setup build && meson compile -C build 
+
+      - name: Create tarball
+        run: tar -cvf package-neko.tar *
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: installer-package
+          path: package-neko.tar
