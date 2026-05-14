@@ -9,7 +9,8 @@ typedef enum {
     GROUP_DRAWING_IMAGE,
     GROUP_SOCIAL,
     GROUP_TEXT_DOCUMENTS,
-    GROUP_DRIVERS
+    GROUP_DRIVERS,
+    GROUP_SECURITY
 } AppGroup;
 
 typedef struct {
