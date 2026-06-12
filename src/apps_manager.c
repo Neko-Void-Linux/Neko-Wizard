@@ -3,7 +3,7 @@
 
 static AppInfo apps[] = {
     // Gaming
-    {"Steam", "steam.png", "pkexec xbps-install -Sy void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree && pkexec xbps-install -Sy steam-udev-rules libGL-32bit libpulseaudio-32bit libtxc_dxtn-32bit mesa-dri mesa-dri-32bit steam-nk", GROUP_GAMING, FALSE, FALSE},
+    {"Steam", "steam.png", "pkexec xbps-install -Sy void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree && pkexec xbps-install -Sy steam-udev-rules libGL-32bit libpulseaudio-32bit libtxc_dxtn-32bit mesa-dri mesa-dri-32bit libdrm-32bit steam-nk", GROUP_GAMING, FALSE, FALSE},
     {"PortProton", "portproton.png", "pkexec xbps-install -Sy portproton", GROUP_GAMING, FALSE, FALSE},
     {"Heroic Games Launcher", "heroic.png", "pkexec xbps-install -Sy heroic-games", GROUP_GAMING, FALSE, FALSE},
     {"Lutris", "lutris.png", "flatpak install flathub net.lutris.Lutris -y", GROUP_GAMING, FALSE, FALSE},
@@ -51,7 +51,7 @@ static AppInfo apps[] = {
     {"Nvidia Proprietary 470", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit nvidia470-opencl nvidia470-libs nvidia470-gtklibs nvidia470-dkms nvidia470 nvidia470-libs-32bit", GROUP_DRIVERS, FALSE, FALSE},
     {"Nvidia Proprietary 390", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit nvidia390-opencl nvidia390-libs nvidia390-gtklibs nvidia390-dkms nvidia390 nvidia390-opencl-32bit nvidia390-libs-32bit nvidia390-gtklibs-32bit nvtop", GROUP_DRIVERS, FALSE, FALSE},
     //SECURITY SECTION
-    {"GUFW (FIREWALL)", "firewall.png", "pkexec xbps-install -S ufw gufw && pkexec ln -s /etc/sv/ufw /var/service/ &&  pkexec nohup ufw enable", GROUP_SECURITY, FALSE, FALSE},
+    {"GUFW (FIREWALL)", "firewall.png", "pkexec xbps-install -Sy ufw gufw && pkexec ln -s /etc/sv/ufw /var/service/ &&  pkexec nohup ufw enable", GROUP_SECURITY, FALSE, FALSE},
     {"CLAMAV + CLAMUI", "clamav.png", "pkexec xbps-install -Sy clamav && pkexec ln -s /etc/sv/clamd /var/service/ && flatpak install io.github.linx_systems.ClamUI  -y", GROUP_SECURITY, FALSE, FALSE}
 };
 
