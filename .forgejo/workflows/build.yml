@@ -1,4 +1,4 @@
-name: Build MiniMatugenJ
+name: Build
 
 on:
   push:
