@@ -30,7 +30,7 @@ jobs:
         run: meson setup build && meson compile -C build 
 
       - name: Create tarball
-        run: tar -cvf package-neko.tar *
+        run: tar -cvf package-neko.tar ./
 
       - name: Upload artifact
         uses: https://code.forgejo.org/actions/upload-artifact@v3
