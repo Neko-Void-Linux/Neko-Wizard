@@ -17,7 +17,6 @@ jobs:
         PATH: '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/sbin:/usr/local/bin:/tmp/bin'
 
     steps:
-      # Este paso debe ir PRIMERO y usar shell puro para evitar dependencias de Node
       - name: Install Node.js and dependencies
         run: |
           xbps-install -Syu --repository=https://repo-de.voidlinux.org/current/ xbps
@@ -34,7 +33,7 @@ jobs:
         run: tar -cvf package-neko.tar *
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: forgejo/upload-artifact@v1  # Cambiado de actions/ a forgejo/
         with:
           name: installer-package
-          path: ./package-neko.tar
+          path: package-neko.tar  # Solo el archivo específico, no ./
