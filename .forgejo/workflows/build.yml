@@ -33,7 +33,7 @@ jobs:
         run: tar -cvf package-neko.tar *
 
       - name: Upload artifact
-        uses: forgejo/upload-artifact@v1  # Cambiado de actions/ a forgejo/
+        uses: forgejo/upload-artifact@v1  
         with:
           name: installer-package
-          path: package-neko.tar  # Solo el archivo específico, no ./
+          path: package-neko.tar  
