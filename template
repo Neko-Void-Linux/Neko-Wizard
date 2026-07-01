@@ -8,8 +8,8 @@ makedepends="gtk4-devel"
 short_desc="Wizard Post Install for NEKO VOID"
 maintainer="JavierC"
 license="WTFPL"
-homepage="https://codeberg.org/javiercplus/Neko-Wizard"
-distfiles="https://codeberg.org/javiercplus/Neko-Wizard/archive/${version}.tar.gz"
+homepage="https://codeberg.org/Neko-Void/Neko-Wizard"
+distfiles="https://codeberg.org/Neko-Void/Neko-Wizard/archive/${version}.tar.gz"
 checksum="741f8e06d36ef459d2ab9677160c57bd2d9430f991e6014fdbea45ebf4d8ff3e"
 
 do_install() {
