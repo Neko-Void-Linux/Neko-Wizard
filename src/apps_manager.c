@@ -43,7 +43,7 @@ static AppInfo apps[] = {
     {"Kate", "org.kde.kate.desktop.png", "pkexec xbps-install -Sy kate", GROUP_TEXT_DOCUMENTS, FALSE, FALSE},
     {"LibreOffice", "Libre-Office.png", "pkexec xbps-install -Sy libreoffice", GROUP_TEXT_DOCUMENTS, FALSE, FALSE},
     // Drivers (grouped - each slot installs all related packages)
-    {"Bluetooth","bluetooth.png", "pkexec xbps-install -Sy bluez blueman && ln -s /etc/sv/bluetoothd /var/service/", GROUP_DRIVERS, FALSE, FALSE},
+    {"Bluetooth","bluetooth.png", "pkexec xbps-install -Sy bluez blueman bluetui && ln -s /etc/sv/bluetoothd /var/service/", GROUP_DRIVERS, FALSE, FALSE},
     {"AMD Drivers", "amd.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit linux-firmware-amd", GROUP_DRIVERS, FALSE, FALSE},
     {"Intel Drivers", "intel.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-intel mesa-vulkan-intel-32bit linux-firmware-intel libva-intel-driver intel-media-driver mesa-intel-dri-32bit mesa-intel-dri", GROUP_DRIVERS, FALSE, FALSE},
     {"Nvidia Open", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-nouveau-dri mesa-vulkan-nouveau", GROUP_DRIVERS, FALSE, FALSE},

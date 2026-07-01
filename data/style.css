@@ -250,3 +250,76 @@ window.light-mode progressbar trough {
 window.light-mode progressbar progress {
     background-color: #111111;
 }
+
+.mirror-section-header {
+    font-size: 1.1em;
+    color: #a0a0a0;
+    padding: 4px 0;
+}
+
+.mirror-row {
+    background: #1e1e1e;
+    border-radius: 8px;
+    padding: 6px 12px;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.mirror-row:hover {
+    background: #242424;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mirror-name {
+    font-size: 1.0em;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.mirror-detail {
+    font-size: 0.85em;
+    color: #888888;
+}
+
+.mirror-test-btn {
+    border-radius: 6px;
+    font-weight: 600;
+    padding: 4px 12px;
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.mirror-test-btn:hover {
+    background-color: #333333;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+window.light-mode .mirror-row {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+window.light-mode .mirror-row:hover {
+    background: #f5f5f5;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+window.light-mode .mirror-name {
+    color: #111111;
+}
+
+window.light-mode .mirror-section-header {
+    color: #666666;
+}
+
+window.light-mode .mirror-test-btn {
+    background-color: #f0f0f0;
+    color: #111111;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+window.light-mode .mirror-test-btn:hover {
+    background-color: #e4e4e4;
+}
