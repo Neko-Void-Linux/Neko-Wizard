@@ -36,4 +36,4 @@ jobs:
         uses: https://code.forgejo.org/actions/upload-artifact@v3
         with:
           name: installer-package
-          path: package-neko.tar.gz
+          path: package-neko.tar
