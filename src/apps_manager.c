@@ -42,6 +42,7 @@ static AppInfo apps[] = {
     {"OnlyOffice", "onlyoffice.png", "flatpak install flathub org.onlyoffice.desktopeditors -y", GROUP_TEXT_DOCUMENTS, FALSE, FALSE},
     {"Kate", "org.kde.kate.desktop.png", "pkexec xbps-install -Sy kate", GROUP_TEXT_DOCUMENTS, FALSE, FALSE},
     {"LibreOffice", "Libre-Office.png", "pkexec xbps-install -Sy libreoffice", GROUP_TEXT_DOCUMENTS, FALSE, FALSE},
+  
     // Drivers (grouped - each slot installs all related packages)
     {"Bluetooth","bluetooth.png", "pkexec xbps-install -Sy bluez blueman bluetui && ln -s /etc/sv/bluetoothd /var/service/", GROUP_DRIVERS, FALSE, FALSE},
     {"AMD Drivers", "amd.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit linux-firmware-amd", GROUP_DRIVERS, FALSE, FALSE},
@@ -51,6 +52,7 @@ static AppInfo apps[] = {
     {"Nvidia Proprietary 580", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit nvidia580 nvidia580-dkms nvidia580-firmware nvidia580-gtklibs nvidia580-libs nvidia580-opencl nvidia580-libs-32bit && pkexec wget -O /tmp/nvi.sh https://codeberg.org/javiercplus/Neko-Wizard/releases/download/nvidia/nvidia-config.sh && pkexec chmod +x /tmp/nvi.sh && pkexec /tmp/nvi.sh", GROUP_DRIVERS, FALSE, FALSE},
     {"Nvidia Proprietary 470", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit nvidia470-opencl nvidia470-libs nvidia470-gtklibs nvidia470-dkms nvidia470 nvidia470-libs-32bit && pkexec wget -O /tmp/nvi.sh https://codeberg.org/javiercplus/Neko-Wizard/releases/download/nvidia/nvidia-config.sh && pkexec chmod +x /tmp/nvi.sh && pkexec /tmp/nvi.sh", GROUP_DRIVERS, FALSE, FALSE},
     {"Nvidia Proprietary 390", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit nvidia390-opencl nvidia390-libs nvidia390-gtklibs nvidia390-dkms nvidia390 nvidia390-opencl-32bit nvidia390-libs-32bit nvidia390-gtklibs-32bit nvtop && pkexec wget -O /tmp/nvi.sh https://codeberg.org/javiercplus/Neko-Wizard/releases/download/nvidia/nvidia-config.sh && pkexec chmod +x /tmp/nvi.sh && pkexec /tmp/nvi.sh", GROUP_DRIVERS, FALSE, FALSE},
+    {"Printer Support", "print.png", "curl -sSL https://codeberg.org/Neko-Void/printer-enable/raw/branch/main/enable.sh | pkexec bash", GROUP_DRIVERS, FALSE , FALSE},
     //SECURITY SECTION
     {"GUFW (FIREWALL)", "firewall.png", "pkexec xbps-install -Sy ufw gufw && pkexec ln -s /etc/sv/ufw /var/service/ &&  pkexec nohup ufw enable", GROUP_SECURITY, FALSE, FALSE},
     {"CLAMAV + CLAMUI", "clamav.png", "pkexec xbps-install -Sy clamav && pkexec ln -s /etc/sv/clamd /var/service/ && flatpak install io.github.linx_systems.ClamUI  -y", GROUP_SECURITY, FALSE, FALSE}
