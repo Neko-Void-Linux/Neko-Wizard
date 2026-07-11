@@ -45,6 +45,7 @@ static AppInfo apps[] = {
   
     // Drivers (grouped - each slot installs all related packages)
     {"Bluetooth","bluetooth.png", "pkexec xbps-install -Sy bluez blueman bluetui && ln -s /etc/sv/bluetoothd /var/service/", GROUP_DRIVERS, FALSE, FALSE},
+    {"Printer Support", "print.png", "curl -sSL https://codeberg.org/Neko-Void/printer-enable/raw/branch/main/enable.sh | pkexec bash -s", GROUP_DRIVERS, FALSE , FALSE},
     {"AMD Drivers", "amd.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit linux-firmware-amd", GROUP_DRIVERS, FALSE, FALSE},
     {"Intel Drivers", "intel.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-intel mesa-vulkan-intel-32bit linux-firmware-intel libva-intel-driver intel-media-driver mesa-intel-dri-32bit mesa-intel-dri", GROUP_DRIVERS, FALSE, FALSE},
     {"Nvidia Open", "nvidia.png", "curl -sSL https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh | pkexec bash -s \"open\" ", GROUP_DRIVERS, FALSE, FALSE},
@@ -52,7 +53,7 @@ static AppInfo apps[] = {
     {"Nvidia Proprietary 580", "nvidia.png", "curl -sSL https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh | pkexec bash -s \"580\" ", GROUP_DRIVERS, FALSE, FALSE},
     {"Nvidia Proprietary 470", "nvidia.png", "curl -sSL https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh | pkexec bash -s \"470\" ", GROUP_DRIVERS, FALSE, FALSE},
     {"Nvidia Proprietary 390", "nvidia.png", "curl -sSL https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh | pkexec bash -s \"390\" ", GROUP_DRIVERS, FALSE, FALSE},
-    {"Printer Support", "print.png", "curl -sSL https://codeberg.org/Neko-Void/printer-enable/raw/branch/main/enable.sh | pkexec bash -s", GROUP_DRIVERS, FALSE , FALSE},
+   
     //SECURITY SECTION
     {"GUFW (FIREWALL)", "firewall.png", "pkexec xbps-install -Sy ufw gufw && pkexec ln -s /etc/sv/ufw /var/service/ &&  pkexec ufw enable", GROUP_SECURITY, FALSE, FALSE},
     {"CLAMAV + CLAMUI", "clamav.png", "pkexec xbps-install -Sy clamav && pkexec ln -s /etc/sv/clamd /var/service/ && flatpak install io.github.linx_systems.ClamUI  -y", GROUP_SECURITY, FALSE, FALSE}
