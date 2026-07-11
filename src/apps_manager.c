@@ -10,7 +10,7 @@ static AppInfo apps[] = {
     {"Hytale", "hytale.png", "wget -O /tmp/tmp.flatpak https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak && flatpak install /tmp/tmp.flatpak -y", GROUP_GAMING, FALSE, FALSE},
     {"Trinity Launcher", "trinity.png", "flatpak install com.trench.trinity.launcher -y", GROUP_GAMING, FALSE, FALSE},
     {"PrismLauncher", "prismlauncher.png", "flatpak install flathub org.prismlauncher.PrismLauncher -y", GROUP_GAMING, FALSE, FALSE},
-    {"PineconeMC", "elyprismlauncher.png", "wget -O /tmp/pinecone.flatpakref https://elyprismlauncher.github.io/flatpak/elyprismlauncher.flatpakref && flatpak install/tmp/pinecone.flatpakref  -y", GROUP_GAMING, FALSE, FALSE},
+    {"PineconeMC", "elyprismlauncher.png", "wget -O /tmp/pinecone.flatpakref https://elyprismlauncher.github.io/flatpak/elyprismlauncher.flatpakref && flatpak install /tmp/pinecone.flatpakref  -y", GROUP_GAMING, FALSE, FALSE},
     {"ProtonUp-Qt", "protonup-qt.png", "flatpak install flathub net.davidotek.pupgui2 -y", GROUP_GAMING, FALSE, FALSE},
     {"Faugus Launcher", "faugus.png", "pkexec xbps-install -Sy faugus-launcher", GROUP_GAMING, FALSE, FALSE},
     // Audio and Video editing
@@ -47,14 +47,14 @@ static AppInfo apps[] = {
     {"Bluetooth","bluetooth.png", "pkexec xbps-install -Sy bluez blueman bluetui && ln -s /etc/sv/bluetoothd /var/service/", GROUP_DRIVERS, FALSE, FALSE},
     {"AMD Drivers", "amd.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit linux-firmware-amd", GROUP_DRIVERS, FALSE, FALSE},
     {"Intel Drivers", "intel.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-intel mesa-vulkan-intel-32bit linux-firmware-intel libva-intel-driver intel-media-driver mesa-intel-dri-32bit mesa-intel-dri", GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Open", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-nouveau-dri mesa-vulkan-nouveau", GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Proprietary Lastest", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit nvidia nvidia-dkms nvidia-firmware nvidia-gtklibs nvidia-gtklibs-32bit nvidia-libs nvidia-libs-32bit nvidia-opencl nvidia-opencl-32bit nvidia-vaapi-driver nvidia-docker nvidia-container-toolkit && pkexec wget -O /tmp/nvi.sh https://codeberg.org/javiercplus/Neko-Wizard/releases/download/nvidia/nvidia-config.sh && pkexec chmod +x /tmp/nvi.sh && pkexec /tmp/nvi.sh", GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Proprietary 580", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit nvidia580 nvidia580-dkms nvidia580-firmware nvidia580-gtklibs nvidia580-libs nvidia580-opencl nvidia580-libs-32bit && pkexec wget -O /tmp/nvi.sh https://codeberg.org/javiercplus/Neko-Wizard/releases/download/nvidia/nvidia-config.sh && pkexec chmod +x /tmp/nvi.sh && pkexec /tmp/nvi.sh", GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Proprietary 470", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit nvidia470-opencl nvidia470-libs nvidia470-gtklibs nvidia470-dkms nvidia470 nvidia470-libs-32bit && pkexec wget -O /tmp/nvi.sh https://codeberg.org/javiercplus/Neko-Wizard/releases/download/nvidia/nvidia-config.sh && pkexec chmod +x /tmp/nvi.sh && pkexec /tmp/nvi.sh", GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Proprietary 390", "nvidia.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit nvidia390-opencl nvidia390-libs nvidia390-gtklibs nvidia390-dkms nvidia390 nvidia390-opencl-32bit nvidia390-libs-32bit nvidia390-gtklibs-32bit nvtop && pkexec wget -O /tmp/nvi.sh https://codeberg.org/javiercplus/Neko-Wizard/releases/download/nvidia/nvidia-config.sh && pkexec chmod +x /tmp/nvi.sh && pkexec /tmp/nvi.sh", GROUP_DRIVERS, FALSE, FALSE},
-    {"Printer Support", "print.png", "curl -sSL https://codeberg.org/Neko-Void/printer-enable/raw/branch/main/enable.sh | pkexec bash", GROUP_DRIVERS, FALSE , FALSE},
+    {"Nvidia Open", "nvidia.png", "curl -sSL https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh | pkexec bash -s \"open\" ", GROUP_DRIVERS, FALSE, FALSE},
+    {"Nvidia Proprietary Lastest", "nvidia.png", "curl -sSL https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh | pkexec bash -s \"latest\" ", GROUP_DRIVERS, FALSE, FALSE},
+    {"Nvidia Proprietary 580", "nvidia.png", "curl -sSL https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh | pkexec bash -s \"580\" ", GROUP_DRIVERS, FALSE, FALSE},
+    {"Nvidia Proprietary 470", "nvidia.png", "curl -sSL https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh | pkexec bash -s \"470\" ", GROUP_DRIVERS, FALSE, FALSE},
+    {"Nvidia Proprietary 390", "nvidia.png", "curl -sSL https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh | pkexec bash -s \"390\" ", GROUP_DRIVERS, FALSE, FALSE},
+    {"Printer Support", "print.png", "curl -sSL https://codeberg.org/Neko-Void/printer-enable/raw/branch/main/enable.sh | pkexec bash -s", GROUP_DRIVERS, FALSE , FALSE},
     //SECURITY SECTION
-    {"GUFW (FIREWALL)", "firewall.png", "pkexec xbps-install -Sy ufw gufw && pkexec ln -s /etc/sv/ufw /var/service/ &&  pkexec nohup ufw enable", GROUP_SECURITY, FALSE, FALSE},
+    {"GUFW (FIREWALL)", "firewall.png", "pkexec xbps-install -Sy ufw gufw && pkexec ln -s /etc/sv/ufw /var/service/ &&  pkexec ufw enable", GROUP_SECURITY, FALSE, FALSE},
     {"CLAMAV + CLAMUI", "clamav.png", "pkexec xbps-install -Sy clamav && pkexec ln -s /etc/sv/clamd /var/service/ && flatpak install io.github.linx_systems.ClamUI  -y", GROUP_SECURITY, FALSE, FALSE}
 };
 
