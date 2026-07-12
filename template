@@ -1,6 +1,6 @@
 # Template file for 'Neko-Wizard'
 pkgname=Neko-Wizard
-version=9.0.11
+version=9.0.12
 revision=5
 build_style=meson
 hostmakedepends="pkg-config meson ninja cmake"
@@ -10,7 +10,7 @@ maintainer="JavierC"
 license="WTFPL"
 homepage="https://codeberg.org/javiercplus/Neko-Wizard"
 distfiles="https://codeberg.org/javiercplus/Neko-Wizard/archive/${version}.tar.gz"
-checksum="095fd62668fc9b04a89b4a6557b29294fbc593bbd896980f2c9b835af3768142"
+checksum="bfee78a4a523c0e78e3fe8b1009e03001709e8132e6be523acbea161ca567f5d"
 
 do_install() {
 	# Crear todos los directorios base necesarios primero
