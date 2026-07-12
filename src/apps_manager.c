@@ -44,7 +44,7 @@ static AppInfo apps[] = {
     {"LibreOffice", "Libre-Office.png", "pkexec xbps-install -Sy libreoffice", GROUP_TEXT_DOCUMENTS, FALSE, FALSE},
   
     // Drivers (grouped - each slot installs all related packages)
-    {"Bluetooth","bluetooth.png", "pkexec xbps-install -Sy bluez blueman bluetui && ln -s /etc/sv/bluetoothd /var/service/", GROUP_DRIVERS, FALSE, FALSE},
+    {"Bluetooth","bluetooth.png", "curl -fsSL -o /tmp/bluetooth-enable.sh https://codeberg.org/Neko-Void/bluetooth-enabler/raw/branch/main/install.sh && pkexec bash  /tmp/bluetooth-enable.sh", GROUP_DRIVERS, FALSE, FALSE},
     {"Printer Support", "print.png", "curl -fsSL -o /tmp/printer-enable.sh https://codeberg.org/Neko-Void/printer-enable/raw/branch/main/enable.sh && pkexec bash /tmp/printer-enable.sh", GROUP_DRIVERS, FALSE, FALSE},
     {"AMD Drivers", "amd.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit linux-firmware-amd", GROUP_DRIVERS, FALSE, FALSE},
     {"Intel Drivers", "intel.png", "pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-intel mesa-vulkan-intel-32bit linux-firmware-intel libva-intel-driver intel-media-driver mesa-intel-dri-32bit mesa-intel-dri", GROUP_DRIVERS, FALSE, FALSE},
