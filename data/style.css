@@ -392,6 +392,19 @@ radio:checked {
     color: @on_accent;
 }
 
+/* The checked radio is the one thing the reset above cannot square: the theme
+   draws the dot as a circular SVG asset, not as a border-radius. Drop the asset
+   and paint a square block instead. The gradient is just a flat fill — it is
+   the only way to get a plain rectangle out of background-image, which is also
+   why this rule has to out-specify the `background-image: none` reset. */
+radio:checked {
+    -gtk-icon-source: none;
+    background-image: linear-gradient(to bottom, @on_accent, @on_accent);
+    background-size: 8px 8px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
 switch {
     min-width: 40px;
     min-height: 20px;
