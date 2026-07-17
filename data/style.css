@@ -28,6 +28,9 @@
 @define-color headerbar_fg_color #ececec;
 @define-color accent_bg_color    #4a90e2;
 @define-color accent_fg_color    #ffffff;
+/* Only used for the close button. Noctalia maps this to the scheme's own red. */
+@define-color error_bg_color     #cc3b33;
+@define-color error_fg_color     #ffffff;
 
 /* --- Palette: dark (default) ----------------------------------------------
    Everything below is derived from the bridge above, so overriding a single
@@ -91,6 +94,53 @@ headerbar {
     letter-spacing: 0.4px;
     color: @text_dim;
     padding: 0 8px;
+}
+
+/* Window controls — monochrome.
+   Themes in the traffic-light style paint these as filled orange/green/red
+   squares, which is the loudest thing on screen in an otherwise neutral UI.
+   Note *where* they paint it: the button is left transparent with
+   `color: transparent`, and the square is a background on the child `image`
+   node. Resetting the button alone changes nothing — the image is the target.
+   Close keeps a red, because it is the one button you do not want to hit by
+   accident; @error_bg_color means the theme picks the shade. */
+windowcontrols > button {
+    min-width: 26px;
+    min-height: 26px;
+    padding: 0;
+    margin: 0 1px;
+    background-color: transparent;
+    border: none;
+    color: @text_dim;
+}
+
+windowcontrols > button > image {
+    background-color: transparent;
+    min-width: 16px;
+    min-height: 16px;
+}
+
+windowcontrols > button:hover {
+    background-color: @surface_hi;
+    color: @text;
+}
+
+windowcontrols > button:active {
+    background-color: @border;
+}
+
+windowcontrols > button.close {
+    color: @error_bg_color;
+}
+
+windowcontrols > button.close:hover {
+    background-color: @error_bg_color;
+    color: @error_fg_color;
+}
+
+windowcontrols > button.close:active {
+    background-color: mix(@error_bg_color, @window_fg_color, 0.2);
+    color: @error_fg_color;
 }
 
 /* ==========================================================================

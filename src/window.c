@@ -68,6 +68,10 @@ struct _NekoStoreWindow {
 
 G_DEFINE_TYPE (NekoStoreWindow, neko_store_window, GTK_TYPE_APPLICATION_WINDOW)
 
+// Live theme reload; see watch_user_theme() near the bottom of this file.
+static GtkCssProvider *theme_provider = NULL;
+static GFileMonitor *theme_monitor = NULL;
+
 static void go_to_gaming_page(GtkButton *btn, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
     gtk_stack_set_visible_child(GTK_STACK(self->stack), self->gaming_page);
@@ -597,11 +601,8 @@ static void build_mirror_page(NekoStoreWindow *self) {
         GtkWidget *info_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
         gtk_widget_set_hexpand(info_box, TRUE);
 
-        char *tier_tag = g_strdup_printf("[T%d] ", mirror->tier);
-        char *full_name = g_strdup_printf("%s%s", tier_tag, mirror->name);
-        GtkWidget *name_label = gtk_label_new(full_name);
-        g_free(full_name);
-        g_free(tier_tag);
+        // No [T1]/[T2] prefix: the tier is already the section header above.
+        GtkWidget *name_label = gtk_label_new(mirror->name);
         gtk_widget_add_css_class(name_label, "mirror-name");
         gtk_label_set_xalign(GTK_LABEL(name_label), 0.0);
         gtk_label_set_ellipsize(GTK_LABEL(name_label), PANGO_ELLIPSIZE_END);
@@ -713,6 +714,8 @@ static void neko_store_window_dispose(GObject *object) {
         g_list_free(self->apps_to_install);
         self->apps_to_install = NULL;
     }
+    g_clear_object(&theme_monitor);
+    g_clear_object(&theme_provider);
     G_OBJECT_CLASS(neko_store_window_parent_class)->dispose(object);
 }
 
@@ -737,6 +740,68 @@ static void on_window_map(GtkWidget *widget, gpointer data) {
         }
     }
 #endif
+}
+
+/* --- Live theme reload -----------------------------------------------------
+ * GTK reads ~/.config/gtk-4.0/gtk.css exactly once, at startup, and never
+ * watches it afterwards. Noctalia rewrites the colours it pulls in whenever the
+ * system theme changes, so without this the app keeps whatever palette it
+ * launched with until it is restarted.
+ *
+ * Re-loading the same file into our own provider one step above GTK's own USER
+ * provider makes the fresh values win. Nothing else about precedence changes:
+ * the user's CSS already outranked ours at 800.
+ * -------------------------------------------------------------------------- */
+static char *user_gtk_css_path(void) {
+    return g_build_filename(g_get_user_config_dir(), "gtk-4.0", "gtk.css", NULL);
+}
+
+static void reload_user_theme_css(void) {
+    if (theme_provider == NULL) return;
+
+    char *path = user_gtk_css_path();
+    if (g_file_test(path, G_FILE_TEST_EXISTS)) {
+        GFile *file = g_file_new_for_path(path);
+        gtk_css_provider_load_from_file(theme_provider, file);
+        g_object_unref(file);
+    }
+    g_free(path);
+}
+
+static void on_theme_dir_changed(GFileMonitor *monitor, GFile *file, GFile *other_file,
+                                 GFileMonitorEvent event, gpointer user_data) {
+    if (event == G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT ||
+        event == G_FILE_MONITOR_EVENT_CREATED ||
+        event == G_FILE_MONITOR_EVENT_RENAMED) {
+        reload_user_theme_css();
+    }
+}
+
+static void watch_user_theme(void) {
+    char *path = user_gtk_css_path();
+    gboolean exists = g_file_test(path, G_FILE_TEST_EXISTS);
+    g_free(path);
+    // No user CSS at all: the fallback palette in style.css stands on its own.
+    if (!exists) return;
+
+    theme_provider = gtk_css_provider_new();
+    reload_user_theme_css();
+    gtk_style_context_add_provider_for_display(gdk_display_get_default(),
+                                               GTK_STYLE_PROVIDER(theme_provider),
+                                               GTK_STYLE_PROVIDER_PRIORITY_USER + 1);
+
+    // Watch the directory, not the file: gtk.css only @imports the generated
+    // palette, so its own mtime never moves when the theme changes.
+    char *dir_path = g_build_filename(g_get_user_config_dir(), "gtk-4.0", NULL);
+    GFile *dir = g_file_new_for_path(dir_path);
+    g_free(dir_path);
+
+    theme_monitor = g_file_monitor_directory(dir, G_FILE_MONITOR_NONE, NULL, NULL);
+    g_object_unref(dir);
+
+    if (theme_monitor != NULL) {
+        g_signal_connect(theme_monitor, "changed", G_CALLBACK(on_theme_dir_changed), NULL);
+    }
 }
 
 static void neko_store_window_class_init (NekoStoreWindowClass *klass) {
@@ -773,6 +838,8 @@ NekoStoreWindow *neko_store_window_new (GtkApplication *app) {
     g_object_unref(provider);
     g_object_unref(css_file);
     g_free(css_path);
+
+    watch_user_theme();
 
     g_signal_connect(window, "map", G_CALLBACK(on_window_map), NULL);
 
