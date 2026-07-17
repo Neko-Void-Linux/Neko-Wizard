@@ -45,34 +45,33 @@ static void neko_app_card_class_init(NekoAppCardClass *klass) {
 }
 
 static void neko_app_card_init(NekoAppCard *self) {
-    self->box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    self->box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+    gtk_widget_set_valign(self->box, GTK_ALIGN_CENTER);
     gtk_widget_set_parent(self->box, GTK_WIDGET(self));
-    
-    gtk_widget_set_size_request(GTK_WIDGET(self), 180, 200);
-    gtk_widget_set_margin_top(GTK_WIDGET(self), 8);
-    gtk_widget_set_margin_bottom(GTK_WIDGET(self), 8);
-    gtk_widget_set_margin_start(GTK_WIDGET(self), 8);
-    gtk_widget_set_margin_end(GTK_WIDGET(self), 8);
-    
+
+    // Small floor only: the flow box reflows the grid, so the card must be free
+    // to shrink. Breathing room comes from the CSS padding, not from a fixed size.
+    gtk_widget_set_size_request(GTK_WIDGET(self), 140, 150);
+
     self->icon_image = gtk_image_new();
     gtk_image_set_pixel_size(GTK_IMAGE(self->icon_image), 64);
     gtk_widget_set_halign(self->icon_image, GTK_ALIGN_CENTER);
-    gtk_widget_set_margin_top(self->icon_image, 16);
     gtk_widget_add_css_class(self->icon_image, "card-icon");
-    
+
     self->name_label = gtk_label_new("");
     gtk_widget_add_css_class(self->name_label, "card-title");
     gtk_label_set_wrap(GTK_LABEL(self->name_label), TRUE);
+    gtk_label_set_wrap_mode(GTK_LABEL(self->name_label), PANGO_WRAP_WORD_CHAR);
+    // Cap at two lines so every card in a row ends up the same height.
+    gtk_label_set_lines(GTK_LABEL(self->name_label), 2);
+    gtk_label_set_ellipsize(GTK_LABEL(self->name_label), PANGO_ELLIPSIZE_END);
+    gtk_label_set_max_width_chars(GTK_LABEL(self->name_label), 16);
     gtk_label_set_justify(GTK_LABEL(self->name_label), GTK_JUSTIFY_CENTER);
     gtk_widget_set_halign(self->name_label, GTK_ALIGN_CENTER);
-    
+
     gtk_box_append(GTK_BOX(self->box), self->icon_image);
     gtk_box_append(GTK_BOX(self->box), self->name_label);
-    
-    GtkWidget *spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_widget_set_vexpand(spacer, TRUE);
-    gtk_box_append(GTK_BOX(self->box), spacer);
-    
+
     GtkGesture *click_gesture = gtk_gesture_click_new();
     g_signal_connect(click_gesture, "pressed", G_CALLBACK(on_card_click), self);
     gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(click_gesture));

@@ -13,6 +13,11 @@
 #include <X11/Xlib.h>
 #endif
 
+// Layout scale. Every margin in this file is one of these or a multiple of 4,
+// so the pages stay on a single rhythm. See data/style.css for the rest.
+#define PAGE_PAD 24
+#define GRID_GAP 12
+
 struct _NekoStoreWindow {
     GtkApplicationWindow parent_instance;
     GtkWidget *stack;
@@ -118,45 +123,51 @@ static void on_group_toggle_toggled(GtkCheckButton *btn, gpointer user_data) {
 }
 
 static GtkWidget* create_app_group_page(NekoStoreWindow *self, const char *title, AppGroup group_filter, GtkWidget **flowbox_out, GCallback back_cb, GCallback next_cb, const char *next_btn_label, gboolean is_final_step) {
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 
     // Header
     GtkWidget *header = gtk_label_new(title);
     gtk_widget_add_css_class(header, "page-header");
     gtk_widget_set_halign(header, GTK_ALIGN_START);
-    gtk_widget_set_margin_top(header, 16);
-    gtk_widget_set_margin_start(header, 16);
+    gtk_widget_set_margin_top(header, PAGE_PAD);
+    gtk_widget_set_margin_start(header, PAGE_PAD);
+    gtk_widget_set_margin_end(header, PAGE_PAD);
     gtk_box_append(GTK_BOX(vbox), header);
 
-    GtkWidget *scrolled = gtk_scrolled_window_new();
-    gtk_widget_set_vexpand(scrolled, TRUE);
-    gtk_widget_set_margin_start(scrolled, 16);
-    gtk_widget_set_margin_end(scrolled, 16);
-
-    // Content box
-    GtkWidget *content_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
-    gtk_widget_set_margin_bottom(content_box, 24);
-
-    GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+    // Toolbar: lives outside the scroll area so "Select All" stays reachable.
+    GtkWidget *toolbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+    gtk_widget_add_css_class(toolbar, "toolbar");
+    gtk_widget_set_margin_top(toolbar, 16);
+    gtk_widget_set_margin_start(toolbar, PAGE_PAD);
+    gtk_widget_set_margin_end(toolbar, PAGE_PAD);
 
     GtkWidget *toggle_all = gtk_check_button_new_with_label("Select All");
     gtk_widget_set_halign(toggle_all, GTK_ALIGN_END);
     gtk_widget_set_hexpand(toggle_all, TRUE);
+    gtk_box_append(GTK_BOX(toolbar), toggle_all);
+    gtk_box_append(GTK_BOX(vbox), toolbar);
 
-    gtk_box_append(GTK_BOX(hbox), toggle_all);
-    gtk_box_append(GTK_BOX(content_box), hbox);
+    GtkWidget *scrolled = gtk_scrolled_window_new();
+    gtk_widget_set_vexpand(scrolled, TRUE);
+    gtk_widget_set_margin_start(scrolled, PAGE_PAD);
+    gtk_widget_set_margin_end(scrolled, PAGE_PAD);
+    // Never scroll sideways: the grid reflows to whatever width it is given.
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 
     GtkWidget *flowbox = gtk_flow_box_new();
     gtk_widget_set_valign(flowbox, GTK_ALIGN_START);
     gtk_widget_set_halign(flowbox, GTK_ALIGN_FILL);
-    gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flowbox), 6);
+    gtk_widget_set_margin_top(flowbox, 16);
+    gtk_widget_set_margin_bottom(flowbox, PAGE_PAD);
+    gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(flowbox), 2);
+    gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flowbox), 8);
+    gtk_flow_box_set_homogeneous(GTK_FLOW_BOX(flowbox), TRUE);
     gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(flowbox), GTK_SELECTION_NONE);
-    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), 16);
-    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), 16);
+    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), GRID_GAP);
+    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), GRID_GAP);
 
     g_signal_connect(toggle_all, "toggled", G_CALLBACK(on_group_toggle_toggled), flowbox);
 
-    gtk_box_append(GTK_BOX(content_box), flowbox);
     *flowbox_out = flowbox;
 
     // Load apps
@@ -170,14 +181,16 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, const char *title
     }
     g_list_free(apps);
 
-    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), content_box);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), flowbox);
     gtk_box_append(GTK_BOX(vbox), scrolled);
 
     // Footer buttons box
-    GtkWidget *footer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
-    gtk_widget_set_margin_bottom(footer, 16);
-    gtk_widget_set_margin_end(footer, 16);
-    gtk_widget_set_margin_start(footer, 16);
+    GtkWidget *footer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+    gtk_widget_add_css_class(footer, "footer");
+    gtk_widget_set_margin_top(footer, 16);
+    gtk_widget_set_margin_bottom(footer, PAGE_PAD);
+    gtk_widget_set_margin_end(footer, PAGE_PAD);
+    gtk_widget_set_margin_start(footer, PAGE_PAD);
 
     GtkWidget *spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     gtk_widget_set_hexpand(spacer, TRUE);
@@ -289,21 +302,6 @@ static void on_install_selected_clicked(GtkButton *btn, gpointer user_data) {
     install_app_async("pkexec xbps-install -y -Syu", install_progress_cb, system_update_finished_cb, self);
 }
 
-static gboolean on_theme_switch_state_set(GtkSwitch *widget, gboolean state, gpointer user_data) {
-    GtkSettings *settings = gtk_settings_get_default();
-    g_object_set(settings, "gtk-application-prefer-dark-theme", state, NULL);
-
-    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
-    if (!state) {
-        gtk_widget_add_css_class(GTK_WIDGET(self), "light-mode");
-    } else {
-        gtk_widget_remove_css_class(GTK_WIDGET(self), "light-mode");
-    }
-
-    gtk_switch_set_state(widget, state);
-    return TRUE;
-}
-
 static gboolean on_language_switch_state_set(GtkSwitch *widget, gboolean state, gpointer user_data) {
     // True = Spanish, False = English
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
@@ -332,46 +330,33 @@ static gboolean on_language_switch_state_set(GtkSwitch *widget, gboolean state, 
 }
 
 static void build_welcome_page(NekoStoreWindow *self) {
-    self->welcome_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
-    gtk_widget_set_valign(self->welcome_page, GTK_ALIGN_CENTER);
-    gtk_widget_set_halign(self->welcome_page, GTK_ALIGN_CENTER);
-
-    // Top bar containing switches
+    // Top bar. The dark/light switch used to live here; the palette now comes
+    // from the system theme (see the theme bridge in data/style.css), so the
+    // language switch is all that is left.
     GtkWidget *top_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
     gtk_widget_set_valign(top_bar, GTK_ALIGN_START);
     gtk_widget_set_hexpand(top_bar, TRUE);
-    // Move it to the very top by setting heavy bottom margin, or position it absolutely.
-    // For simplicity, we just use expanding space below.
-
-    // Dark mode switch (Left)
-    GtkWidget *theme_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-    GtkWidget *theme_icon = gtk_image_new_from_icon_name("weather-clear-night-symbolic");
-    GtkWidget *theme_switch = gtk_switch_new();
-    gtk_switch_set_active(GTK_SWITCH(theme_switch), TRUE); // Default dark
-    // Use g_signal_connect instead of state-set to ensure it triggers correctly
-    g_signal_connect(theme_switch, "state-set", G_CALLBACK(on_theme_switch_state_set), self);
-    gtk_box_append(GTK_BOX(theme_box), theme_icon);
-    gtk_box_append(GTK_BOX(theme_box), theme_switch);
-
-    // Spacer
-    GtkWidget *spacer_top = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    gtk_widget_set_hexpand(spacer_top, TRUE);
 
     // Language switch (Right)
     GtkWidget *lang_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_widget_set_halign(lang_box, GTK_ALIGN_END);
+    gtk_widget_set_hexpand(lang_box, TRUE);
     GtkWidget *lang_label_en = gtk_label_new("EN");
+    gtk_widget_add_css_class(lang_label_en, "lang-label");
     GtkWidget *lang_switch = gtk_switch_new();
     GtkWidget *lang_label_es = gtk_label_new("ES");
+    gtk_widget_add_css_class(lang_label_es, "lang-label");
     g_signal_connect(lang_switch, "state-set", G_CALLBACK(on_language_switch_state_set), self);
     gtk_box_append(GTK_BOX(lang_box), lang_label_en);
     gtk_box_append(GTK_BOX(lang_box), lang_switch);
     gtk_box_append(GTK_BOX(lang_box), lang_label_es);
 
-    gtk_box_append(GTK_BOX(top_bar), theme_box);
-    gtk_box_append(GTK_BOX(top_bar), spacer_top);
     gtk_box_append(GTK_BOX(top_bar), lang_box);
 
-    GtkWidget *main_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
+    // Child order here is load-bearing: on_language_switch_state_set() walks it
+    // by position (icon, title, subtitle, ... , button-as-last-child).
+    // Vertical rhythm comes from the CSS margins, hence spacing 0.
+    GtkWidget *main_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_halign(main_content, GTK_ALIGN_CENTER);
     gtk_widget_set_valign(main_content, GTK_ALIGN_CENTER);
     gtk_widget_set_vexpand(main_content, TRUE);
@@ -392,24 +377,20 @@ static void build_welcome_page(NekoStoreWindow *self) {
     GtkWidget *btn = gtk_button_new_with_label("Start Setup");
     gtk_widget_add_css_class(btn, "suggested-action");
     gtk_widget_add_css_class(btn, "start-btn");
+    gtk_widget_set_halign(btn, GTK_ALIGN_CENTER);
     g_signal_connect(btn, "clicked", G_CALLBACK(go_to_mirror_page), self);
 
     gtk_box_append(GTK_BOX(main_content), icon);
     gtk_box_append(GTK_BOX(main_content), title);
     gtk_box_append(GTK_BOX(main_content), subtitle);
-
-    GtkWidget *spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_widget_set_size_request(spacer, -1, 32);
-    gtk_box_append(GTK_BOX(main_content), spacer);
-
     gtk_box_append(GTK_BOX(main_content), btn);
 
     // Assemble the whole structure
     // We want the top bar at the strict top, and main content centered.
     GtkWidget *welcome_container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_widget_set_margin_top(top_bar, 16);
-    gtk_widget_set_margin_start(top_bar, 16);
-    gtk_widget_set_margin_end(top_bar, 16);
+    gtk_widget_set_margin_top(top_bar, PAGE_PAD);
+    gtk_widget_set_margin_start(top_bar, PAGE_PAD);
+    gtk_widget_set_margin_end(top_bar, PAGE_PAD);
 
     gtk_box_append(GTK_BOX(welcome_container), top_bar);
     gtk_box_append(GTK_BOX(welcome_container), main_content);
@@ -419,25 +400,31 @@ static void build_welcome_page(NekoStoreWindow *self) {
 }
 
 static void build_finished_page(NekoStoreWindow *self) {
-    self->finished_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
+    self->finished_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_valign(self->finished_page, GTK_ALIGN_CENTER);
     gtk_widget_set_halign(self->finished_page, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_start(self->finished_page, PAGE_PAD);
+    gtk_widget_set_margin_end(self->finished_page, PAGE_PAD);
 
     self->finished_label = gtk_label_new("Installing Apps...");
-    gtk_widget_add_css_class(self->finished_label, "welcome-title");
+    gtk_widget_add_css_class(self->finished_label, "page-header");
+    gtk_label_set_wrap(GTK_LABEL(self->finished_label), TRUE);
+    gtk_label_set_justify(GTK_LABEL(self->finished_label), GTK_JUSTIFY_CENTER);
+    gtk_label_set_max_width_chars(GTK_LABEL(self->finished_label), 40);
 
     self->progress_bar = gtk_progress_bar_new();
-    gtk_widget_set_size_request(self->progress_bar, 400, -1);
+    gtk_widget_add_css_class(self->progress_bar, "install-progress");
+    gtk_widget_set_hexpand(self->progress_bar, TRUE);
+    gtk_widget_set_size_request(self->progress_bar, 320, -1);
+    gtk_widget_set_margin_top(self->progress_bar, 32);
 
     self->status_label = gtk_label_new("Preparing...");
     gtk_widget_add_css_class(self->status_label, "dim-label");
+    gtk_widget_set_margin_top(self->status_label, 12);
+    gtk_label_set_ellipsize(GTK_LABEL(self->status_label), PANGO_ELLIPSIZE_END);
+    gtk_label_set_max_width_chars(GTK_LABEL(self->status_label), 48);
 
     gtk_box_append(GTK_BOX(self->finished_page), self->finished_label);
-
-    GtkWidget *spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_widget_set_size_request(spacer, -1, 32);
-    gtk_box_append(GTK_BOX(self->finished_page), spacer);
-
     gtk_box_append(GTK_BOX(self->finished_page), self->progress_bar);
     gtk_box_append(GTK_BOX(self->finished_page), self->status_label);
 }
@@ -534,26 +521,32 @@ static void build_mirror_page(NekoStoreWindow *self);
 static void go_to_welcome_page(GtkButton *btn, gpointer user_data);
 
 static void build_mirror_page(NekoStoreWindow *self) {
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 
     GtkWidget *header = gtk_label_new("Choose Repository");
     gtk_widget_add_css_class(header, "page-header");
     gtk_widget_set_halign(header, GTK_ALIGN_START);
-    gtk_widget_set_margin_top(header, 16);
-    gtk_widget_set_margin_start(header, 16);
+    gtk_widget_set_margin_top(header, PAGE_PAD);
+    gtk_widget_set_margin_start(header, PAGE_PAD);
+    gtk_widget_set_margin_end(header, PAGE_PAD);
     gtk_box_append(GTK_BOX(vbox), header);
 
     GtkWidget *desc = gtk_label_new("Select a Void Linux mirror to use for installations. Test connectivity to find the fastest mirror.");
-    gtk_widget_set_margin_start(desc, 16);
-    gtk_widget_set_margin_end(desc, 16);
+    gtk_widget_add_css_class(desc, "page-desc");
+    gtk_widget_set_margin_top(desc, 4);
+    gtk_widget_set_margin_start(desc, PAGE_PAD);
+    gtk_widget_set_margin_end(desc, PAGE_PAD);
     gtk_label_set_wrap(GTK_LABEL(desc), TRUE);
+    gtk_label_set_max_width_chars(GTK_LABEL(desc), 60);
     gtk_label_set_xalign(GTK_LABEL(desc), 0.0);
     gtk_box_append(GTK_BOX(vbox), desc);
 
     GtkWidget *scrolled = gtk_scrolled_window_new();
     gtk_widget_set_vexpand(scrolled, TRUE);
-    gtk_widget_set_margin_start(scrolled, 16);
-    gtk_widget_set_margin_end(scrolled, 16);
+    gtk_widget_set_margin_top(scrolled, 16);
+    gtk_widget_set_margin_start(scrolled, PAGE_PAD);
+    gtk_widget_set_margin_end(scrolled, PAGE_PAD);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 
     GtkWidget *list_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
 
@@ -578,17 +571,13 @@ static void build_mirror_page(NekoStoreWindow *self) {
             g_free(markup);
             gtk_label_set_xalign(GTK_LABEL(tier_header), 0.0);
             gtk_widget_add_css_class(tier_header, "mirror-section-header");
-            gtk_widget_set_margin_top(tier_header, 12);
-            gtk_widget_set_margin_start(tier_header, 8);
+            gtk_widget_set_margin_top(tier_header, 20);
+            gtk_widget_set_margin_bottom(tier_header, 4);
             gtk_box_append(GTK_BOX(list_box), tier_header);
         }
 
-        GtkWidget *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+        GtkWidget *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
         gtk_widget_add_css_class(row, "mirror-row");
-        gtk_widget_set_margin_start(row, 8);
-        gtk_widget_set_margin_end(row, 8);
-        gtk_widget_set_margin_top(row, 3);
-        gtk_widget_set_margin_bottom(row, 3);
 
         GtkWidget *radio = gtk_check_button_new();
         if (first_radio != NULL) {
@@ -615,6 +604,7 @@ static void build_mirror_page(NekoStoreWindow *self) {
         g_free(tier_tag);
         gtk_widget_add_css_class(name_label, "mirror-name");
         gtk_label_set_xalign(GTK_LABEL(name_label), 0.0);
+        gtk_label_set_ellipsize(GTK_LABEL(name_label), PANGO_ELLIPSIZE_END);
         gtk_box_append(GTK_BOX(info_box), name_label);
 
         char *detail = g_strdup_printf("%s  •  %s, %s", mirror->url, mirror->region, mirror->location);
@@ -622,6 +612,8 @@ static void build_mirror_page(NekoStoreWindow *self) {
         g_free(detail);
         gtk_widget_add_css_class(detail_label, "mirror-detail");
         gtk_label_set_xalign(GTK_LABEL(detail_label), 0.0);
+        // Long mirror URLs would otherwise pin the window to their full width.
+        gtk_label_set_ellipsize(GTK_LABEL(detail_label), PANGO_ELLIPSIZE_END);
         gtk_box_append(GTK_BOX(info_box), detail_label);
 
         gtk_box_append(GTK_BOX(row), info_box);
@@ -639,23 +631,22 @@ static void build_mirror_page(NekoStoreWindow *self) {
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), list_box);
     gtk_box_append(GTK_BOX(vbox), scrolled);
 
-    GtkWidget *status_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-    gtk_widget_set_margin_start(status_box, 16);
-    gtk_widget_set_margin_end(status_box, 16);
-    gtk_widget_set_margin_bottom(status_box, 8);
-
     self->mirror_status_label = gtk_label_new("Select a mirror and click Test to check connectivity");
     gtk_widget_add_css_class(self->mirror_status_label, "dim-label");
     gtk_widget_set_hexpand(self->mirror_status_label, TRUE);
+    gtk_widget_set_margin_top(self->mirror_status_label, 16);
+    gtk_widget_set_margin_start(self->mirror_status_label, PAGE_PAD);
+    gtk_widget_set_margin_end(self->mirror_status_label, PAGE_PAD);
     gtk_label_set_xalign(GTK_LABEL(self->mirror_status_label), 0.0);
+    gtk_label_set_ellipsize(GTK_LABEL(self->mirror_status_label), PANGO_ELLIPSIZE_END);
+    gtk_box_append(GTK_BOX(vbox), self->mirror_status_label);
 
-    gtk_box_append(GTK_BOX(status_box), self->mirror_status_label);
-    gtk_box_append(GTK_BOX(vbox), status_box);
-
-    GtkWidget *footer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
-    gtk_widget_set_margin_bottom(footer, 16);
-    gtk_widget_set_margin_end(footer, 16);
-    gtk_widget_set_margin_start(footer, 16);
+    GtkWidget *footer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+    gtk_widget_add_css_class(footer, "footer");
+    gtk_widget_set_margin_top(footer, 16);
+    gtk_widget_set_margin_bottom(footer, PAGE_PAD);
+    gtk_widget_set_margin_end(footer, PAGE_PAD);
+    gtk_widget_set_margin_start(footer, PAGE_PAD);
 
     GtkWidget *back_btn = gtk_button_new_with_label("Back");
     gtk_widget_add_css_class(back_btn, "suggested-action");

@@ -1,325 +1,451 @@
+/* ==========================================================================
+   Neko Wizard — minimal / flat / sharp
+   --------------------------------------------------------------------------
+   Design rules (keep these when editing):
+     · Radius   : 0 everywhere. No rounded corners, ever.
+     · Depth    : borders only. No box-shadow, no drop-shadow, no blur.
+     · Motion   : colour fades only. No transform, no lift, no scale.
+     · Spacing  : multiples of 4 — 4 / 8 / 12 / 16 / 24 / 32.
+     · Hierarchy: one accent colour, everything else is neutral.
+     · Colour   : never hard-code a hex outside the palette block below.
+   ========================================================================== */
+
+/* --- Theme bridge ---------------------------------------------------------
+   These are the standard libadwaita colour names. Noctalia's template
+   processor writes them to ~/.config/gtk-4.0/noctalia.css, which GTK loads at
+   USER priority — above this file — so wherever Noctalia is installed its
+   values win and the app tracks the system theme with no code involved.
+   The values below are only the fallback for systems without it.
+   Any tool that emits the same names (matugen, pywal templates, stock
+   libadwaita) drives the app just as well.
+   -------------------------------------------------------------------------- */
+@define-color window_bg_color    #101010;
+@define-color window_fg_color    #ececec;
+@define-color view_bg_color      #101010;
+@define-color view_fg_color      #ececec;
+@define-color card_bg_color      #171717;
+@define-color headerbar_bg_color #101010;
+@define-color headerbar_fg_color #ececec;
+@define-color accent_bg_color    #4a90e2;
+@define-color accent_fg_color    #ffffff;
+
+/* --- Palette: dark (default) ----------------------------------------------
+   Everything below is derived from the bridge above, so overriding a single
+   theme colour repaints the whole app coherently. GTK resolves these lazily,
+   which is what lets Noctalia's override propagate through the mix() calls.
+   -------------------------------------------------------------------------- */
+@define-color bg           @window_bg_color;
+@define-color surface      @card_bg_color;
+@define-color surface_hi   mix(@card_bg_color, @window_fg_color, 0.07);
+@define-color border       mix(@window_bg_color, @window_fg_color, 0.14);
+@define-color border_hi    mix(@window_bg_color, @window_fg_color, 0.28);
+@define-color text         @window_fg_color;
+@define-color text_soft    mix(@window_fg_color, @window_bg_color, 0.25);
+@define-color text_dim     mix(@window_fg_color, @window_bg_color, 0.45);
+@define-color accent       @accent_bg_color;
+@define-color accent_hi    mix(@accent_bg_color, @window_fg_color, 0.20);
+@define-color on_accent    @accent_fg_color;
+
+/* There is deliberately no second, light palette here. The tokens above are
+   derived symmetrically — border/hover mix *towards* the foreground, dim text
+   mixes *towards* the background — so the same rules render correctly whether
+   the theme hands us a dark surface or a light one. Light mode is Noctalia's
+   [theme] mode = "light", not a switch inside this app. */
+
+/* --- Global reset ---------------------------------------------------------
+   Provider priority (APPLICATION) beats the stock theme's specificity, so a
+   plain `*` is enough to flatten everything Adwaita adds.
+   background-image matters as much as the rest: Adwaita paints .suggested-action
+   with a gradient *image* over the colour, which would otherwise sit on top of
+   our flat accent and show through as a gradient on the primary buttons.
+   -------------------------------------------------------------------------- */
+* {
+    border-radius: 0;
+    box-shadow: none;
+    text-shadow: none;
+    -gtk-icon-shadow: none;
+    background-image: none;
+}
+
 window {
-    background-color: #121212;
-    color: #e0e0e0;
+    background-color: @bg;
+    color: @text;
     font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
 }
 
+/* ==========================================================================
+   Header bar
+   ========================================================================== */
+
 headerbar {
-    background: transparent;
-    border: none;
-    box-shadow: none;
+    background-color: @headerbar_bg_color;
+    color: @headerbar_fg_color;
+    border-bottom: 1px solid @border;
+    min-height: 44px;
+    padding: 0 8px;
 }
 
 .title-label {
-    font-weight: 700;
-    font-size: 1.1em;
-    padding: 0 10px;
-    color: #ffffff;
-    opacity: 0.9;
+    font-size: 0.9em;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    color: @text_dim;
+    padding: 0 8px;
 }
 
-.welcome-icon {
-    opacity: 0.85;
-    margin-bottom: 24px;
-    filter: grayscale(20%) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+/* ==========================================================================
+   Buttons
+   --------------------------------------------------------------------------
+   Note: the code adds .suggested-action *and* .start-btn / .install-selected-btn
+   to the same widget, so the primary rules below are written as `button.<class>`
+   and placed after `button.suggested-action` to win on specificity.
+   ========================================================================== */
+
+button {
+    padding: 8px 16px;
+    font-weight: 500;
+    background-color: @surface;
+    color: @text;
+    border: 1px solid @border;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-.welcome-title {
-    font-size: 2.2em;
-    font-weight: 800;
-    color: #ffffff;
-    margin-bottom: 8px;
-    letter-spacing: -0.5px;
+button:hover {
+    background-color: @surface_hi;
+    border-color: @border_hi;
 }
 
-.welcome-subtitle {
-    font-size: 1.1em;
-    color: #888888;
-    margin-bottom: 32px;
+button:active {
+    background-color: @border;
 }
 
-.start-btn {
-    font-size: 1.1em;
-    padding: 12px 32px;
-    border-radius: 8px;
-    background-color: #ffffff;
-    color: #121212;
-    font-weight: 700;
-    border: 1px solid #ffffff;
-    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
-    transition: all 0.2s ease;
+button:focus-visible {
+    outline: 1px solid @accent;
+    outline-offset: -3px;
 }
 
-.start-btn:hover {
-    background-color: #f0f0f0;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.15);
-}
-
-.start-btn:active {
-    transform: translateY(1px);
-    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
-}
-
-.page-header {
-    font-size: 1.6em;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-    color: #ffffff;
-}
-
-.group-title {
-    font-size: 1.1em;
-    font-weight: 600;
-    color: #a0a0a0;
-}
-
-appcard {
-    background: #1e1e1e;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-appcard:hover {
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.08);
-    background: #242424;
-}
-
-appcard.selected {
-    border-color: #4a90e2;
-    background: rgba(74, 144, 226, 0.08);
-    box-shadow: 0 0 0 1px #4a90e2, 0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.card-title {
-    font-size: 1.05em;
-    font-weight: 600;
-    color: #e0e0e0;
-    margin-top: 8px;
-}
-
-.card-icon {
-    margin-bottom: 8px;
-    transition: transform 0.2s ease;
-}
-
-appcard:hover .card-icon {
-    transform: scale(1.03);
-}
-
-checkbutton {
-    margin-top: 8px;
-}
-
-.install-selected-btn {
-    border-radius: 8px;
-    font-weight: 700;
-    padding: 10px 24px;
-    background-color: #4a90e2;
-    color: #ffffff;
-    border: none;
-    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2);
-    transition: all 0.2s ease;
-}
-
-.install-selected-btn:hover {
-    background-color: #357abd;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
-}
-
-.install-selected-btn:active {
-    transform: translateY(1px);
-    box-shadow: 0 1px 4px rgba(74, 144, 226, 0.2);
-}
-
+/* Secondary — "Back" */
 button.suggested-action {
-    border-radius: 8px;
-    font-weight: 600;
-    padding: 10px 20px;
-    background-color: #2a2a2a;
-    color: #e0e0e0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.2s ease;
+    background-color: transparent;
+    color: @text_soft;
+    border: 1px solid @border;
 }
 
 button.suggested-action:hover {
-    background-color: #333333;
-    border-color: rgba(255, 255, 255, 0.15);
+    background-color: @surface;
+    border-color: @border_hi;
+    color: @text;
+}
+
+button.suggested-action:active {
+    background-color: @surface_hi;
+}
+
+/* Primary — "Start Setup". Same accent as "Next"/"Install", just bigger: it is
+   the theme's own accent colour, so it follows Noctalia and falls back to the
+   accent in the palette block above when no theme provider is present. */
+button.start-btn {
+    padding: 12px 40px;
+    font-size: 1em;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    background-color: @accent;
+    color: @on_accent;
+    border: 1px solid @accent;
+}
+
+button.start-btn:hover {
+    background-color: @accent_hi;
+    border-color: @accent_hi;
+}
+
+button.start-btn:active {
+    background-color: @accent;
+    border-color: @accent;
+}
+
+/* Primary — "Next" / "Install" */
+button.install-selected-btn {
+    padding: 8px 24px;
+    font-weight: 600;
+    background-color: @accent;
+    color: @on_accent;
+    border: 1px solid @accent;
+}
+
+button.install-selected-btn:hover {
+    background-color: @accent_hi;
+    border-color: @accent_hi;
+}
+
+button.install-selected-btn:active {
+    background-color: @accent;
+    border-color: @accent;
+}
+
+/* Small — "Test" on the mirror rows */
+button.mirror-test-btn {
+    padding: 4px 14px;
+    font-size: 0.85em;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    background-color: transparent;
+    color: @text_soft;
+    border: 1px solid @border;
+}
+
+button.mirror-test-btn:hover {
+    background-color: @surface_hi;
+    border-color: @border_hi;
+    color: @text;
+}
+
+/* ==========================================================================
+   Welcome page
+   ========================================================================== */
+
+.welcome-icon {
+    opacity: 0.9;
+}
+
+.welcome-title {
+    font-size: 2em;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: @text;
+    margin-top: 24px;
+}
+
+.welcome-subtitle {
+    font-size: 1em;
+    color: @text_dim;
+    margin-top: 8px;
+    margin-bottom: 32px;
+}
+
+.lang-label {
+    font-size: 0.8em;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    color: @text_dim;
+}
+
+/* ==========================================================================
+   Page chrome — header / description / toolbar
+   ========================================================================== */
+
+.page-header {
+    font-size: 1.35em;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    color: @text;
+}
+
+.page-desc {
+    font-size: 0.9em;
+    color: @text_dim;
+}
+
+.toolbar {
+    border-bottom: 1px solid @border;
+    padding-bottom: 12px;
+}
+
+.footer {
+    border-top: 1px solid @border;
+    padding-top: 16px;
+}
+
+.group-title {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: @text_dim;
 }
 
 .dim-label {
-    color: #888888;
+    color: @text_dim;
+    font-size: 0.9em;
 }
+
+/* ==========================================================================
+   App cards
+   ========================================================================== */
 
 flowboxchild {
     background: transparent;
     padding: 0;
+    border: none;
 }
 
-progressbar {
-    border-radius: 6px;
+flowboxchild:focus-visible {
+    outline: 1px solid @accent;
+    outline-offset: -1px;
 }
+
+appcard {
+    background-color: @surface;
+    border: 1px solid @border;
+    padding: 20px 12px;
+    transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+appcard:hover {
+    background-color: @surface_hi;
+    border-color: @border_hi;
+}
+
+appcard.selected {
+    background-color: @surface_hi;
+    border-color: @accent;
+}
+
+.card-icon {
+    opacity: 0.9;
+}
+
+appcard.selected .card-icon {
+    opacity: 1;
+}
+
+.card-title {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: @text_soft;
+}
+
+appcard.selected .card-title {
+    color: @text;
+}
+
+/* ==========================================================================
+   Checks, radios, switches — squared off
+   ========================================================================== */
+
+check,
+radio {
+    min-width: 16px;
+    min-height: 16px;
+    background-color: @surface;
+    border: 1px solid @border_hi;
+    transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+check:hover,
+radio:hover {
+    border-color: @text_dim;
+}
+
+check:checked,
+radio:checked {
+    background-color: @accent;
+    border-color: @accent;
+    color: @on_accent;
+}
+
+switch {
+    min-width: 40px;
+    min-height: 20px;
+    padding: 2px;
+    background-color: @surface;
+    border: 1px solid @border_hi;
+}
+
+switch:checked {
+    background-color: @accent;
+    border-color: @accent;
+}
+
+switch > slider {
+    min-width: 14px;
+    min-height: 14px;
+    margin: 0;
+    background-color: @text_soft;
+    border: none;
+}
+
+switch:checked > slider {
+    background-color: @on_accent;
+}
+
+/* ==========================================================================
+   Progress bar
+   ========================================================================== */
 
 progressbar trough {
-    background-color: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
+    min-height: 4px;
+    background-color: @surface;
+    border: 1px solid @border;
 }
 
 progressbar progress {
-    background-color: #e0e0e0;
-    border-radius: 6px;
-}
-
-window.light-mode {
-    background-color: #fcfcfc;
-    color: #1a1a1a;
-}
-
-window.light-mode .title-label,
-window.light-mode .welcome-title,
-window.light-mode .card-title,
-window.light-mode .page-header {
-    color: #111111;
-}
-
-window.light-mode .group-title,
-window.light-mode .welcome-subtitle,
-window.light-mode .dim-label {
-    color: #666666;
-}
-
-window.light-mode .start-btn {
-    background-color: #111111;
-    color: #ffffff;
+    min-height: 4px;
+    background-color: @accent;
     border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-window.light-mode .start-btn:hover {
-    background-color: #222222;
+progressbar text {
+    font-size: 0.85em;
+    color: @text_dim;
 }
 
-window.light-mode appcard {
-    background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.06);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+/* The one on the install page is the focal point — give it a little more weight. */
+.install-progress trough,
+.install-progress progress {
+    min-height: 6px;
 }
 
-window.light-mode appcard:hover {
-    background: #fdfdfd;
-    border-color: rgba(0, 0, 0, 0.1);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-}
-
-window.light-mode appcard.selected {
-    border-color: #0056b3;
-    background: rgba(0, 86, 179, 0.04);
-    box-shadow: 0 0 0 1px #0056b3, 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-window.light-mode .install-selected-btn {
-    background-color: #0056b3;
-    color: #ffffff;
-}
-
-window.light-mode .install-selected-btn:hover {
-    background-color: #004494;
-}
-
-window.light-mode button.suggested-action {
-    background-color: #f0f0f0;
-    color: #111111;
-    border-color: rgba(0, 0, 0, 0.1);
-}
-
-window.light-mode button.suggested-action:hover {
-    background-color: #e4e4e4;
-}
-
-window.light-mode progressbar trough {
-    background-color: #eeeeee;
-    border-color: rgba(0, 0, 0, 0.05);
-}
-
-window.light-mode progressbar progress {
-    background-color: #111111;
-}
+/* ==========================================================================
+   Mirror list
+   ========================================================================== */
 
 .mirror-section-header {
-    font-size: 1.1em;
-    color: #a0a0a0;
-    padding: 4px 0;
+    font-size: 0.85em;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    color: @text_dim;
 }
 
 .mirror-row {
-    background: #1e1e1e;
-    border-radius: 8px;
-    padding: 6px 12px;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background-color: @surface;
+    border: 1px solid @border;
+    padding: 10px 12px;
+    transition: background-color 120ms ease, border-color 120ms ease;
 }
 
 .mirror-row:hover {
-    background: #242424;
-    border-color: rgba(255, 255, 255, 0.08);
+    background-color: @surface_hi;
+    border-color: @border_hi;
 }
 
 .mirror-name {
-    font-size: 1.0em;
-    font-weight: 600;
-    color: #e0e0e0;
+    font-size: 0.95em;
+    font-weight: 500;
+    color: @text;
 }
 
 .mirror-detail {
-    font-size: 0.85em;
-    color: #888888;
+    font-size: 0.8em;
+    color: @text_dim;
 }
 
-.mirror-test-btn {
-    border-radius: 6px;
-    font-weight: 600;
-    padding: 4px 12px;
-    background-color: #2a2a2a;
-    color: #e0e0e0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.2s ease;
+/* ==========================================================================
+   Scrollbars
+   ========================================================================== */
+
+scrollbar {
+    background-color: transparent;
+    border: none;
 }
 
-.mirror-test-btn:hover {
-    background-color: #333333;
-    border-color: rgba(255, 255, 255, 0.15);
+scrollbar slider {
+    min-width: 6px;
+    min-height: 6px;
+    margin: 0;
+    border: none;
+    background-color: @border_hi;
 }
 
-window.light-mode .mirror-row {
-    background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.06);
+scrollbar slider:hover {
+    background-color: @text_dim;
 }
 
-window.light-mode .mirror-row:hover {
-    background: #f5f5f5;
-    border-color: rgba(0, 0, 0, 0.1);
-}
-
-window.light-mode .mirror-name {
-    color: #111111;
-}
-
-window.light-mode .mirror-section-header {
-    color: #666666;
-}
-
-window.light-mode .mirror-test-btn {
-    background-color: #f0f0f0;
-    color: #111111;
-    border-color: rgba(0, 0, 0, 0.1);
-}
-
-window.light-mode .mirror-test-btn:hover {
-    background-color: #e4e4e4;
-}
