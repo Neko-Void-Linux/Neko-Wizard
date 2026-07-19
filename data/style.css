@@ -19,23 +19,30 @@
    Any tool that emits the same names (matugen, pywal templates, stock
    libadwaita) drives the app just as well.
    -------------------------------------------------------------------------- */
-@define-color window_bg_color    #101010;
-@define-color window_fg_color    #ececec;
-@define-color view_bg_color      #101010;
-@define-color view_fg_color      #ececec;
-@define-color card_bg_color      #171717;
-@define-color headerbar_bg_color #101010;
-@define-color headerbar_fg_color #ececec;
-@define-color accent_bg_color    #4a90e2;
-@define-color accent_fg_color    #ffffff;
-/* Only used for the close button. Noctalia maps this to the scheme's own red. */
-@define-color error_bg_color     #cc3b33;
-@define-color error_fg_color     #ffffff;
+/* Fallback palette — only active when no system theme (Noctalia, libadwaita,
+   The names on the RIGHT are GTK4 Adwaita built-ins, available on every GTK4
+   desktop without any third-party theme. When a higher-priority provider
+   (libadwaita, Noctalia, matugen, pywal…) has already defined the names on
+   the LEFT, GTK silently ignores these lines — the system values win.
+   No hex codes, ever. The app always reflects the active system palette.
+   -------------------------------------------------------------------------- */
+@define-color window_bg_color    @theme_bg_color;
+@define-color window_fg_color    @theme_fg_color;
+@define-color view_bg_color      @theme_base_color;
+@define-color view_fg_color      @theme_text_color;
+@define-color card_bg_color      @theme_base_color;
+@define-color headerbar_bg_color @theme_bg_color;
+@define-color headerbar_fg_color @theme_fg_color;
+@define-color accent_bg_color    @theme_selected_bg_color;
+@define-color accent_fg_color    @theme_selected_fg_color;
+@define-color error_bg_color     @error_color;
+@define-color error_fg_color     @theme_selected_fg_color;
 
-/* --- Palette: dark (default) ----------------------------------------------
-   Everything below is derived from the bridge above, so overriding a single
-   theme colour repaints the whole app coherently. GTK resolves these lazily,
-   which is what lets Noctalia's override propagate through the mix() calls.
+/* --- Palette: semantic tokens ---------------------------------------------
+   Everything below is expressed as a mix or alias of the bridge names above,
+   so overriding one bridge colour repaints all derived tokens coherently.
+   GTK resolves these lazily, so Noctalia/libadwaita overrides propagate
+   through the mix() calls automatically.
    -------------------------------------------------------------------------- */
 @define-color bg           @window_bg_color;
 @define-color surface      @card_bg_color;
@@ -49,11 +56,9 @@
 @define-color accent_hi    mix(@accent_bg_color, @window_fg_color, 0.20);
 @define-color on_accent    @accent_fg_color;
 
-/* There is deliberately no second, light palette here. The tokens above are
-   derived symmetrically — border/hover mix *towards* the foreground, dim text
-   mixes *towards* the background — so the same rules render correctly whether
-   the theme hands us a dark surface or a light one. Light mode is Noctalia's
-   [theme] mode = "light", not a switch inside this app. */
+/* The tokens above are derived symmetrically — border/hover mix *towards* the
+   foreground, dim text mixes *towards* the background — so the same rules
+   render correctly for dark or light system themes alike. */
 
 /* --- Global reset ---------------------------------------------------------
    Provider priority (APPLICATION) beats the stock theme's specificity, so a
@@ -239,14 +244,14 @@ button.mirror-test-btn {
     font-size: 0.85em;
     font-weight: 500;
     letter-spacing: 0.3px;
-    background-color: transparent;
+    background-color: @border;
     color: @text_soft;
-    border: 1px solid @border;
+    border: 1px solid @border_hi;
 }
 
 button.mirror-test-btn:hover {
-    background-color: @surface_hi;
-    border-color: @border_hi;
+    background-color: @border_hi;
+    border-color: @text_dim;
     color: @text;
 }
 
@@ -368,13 +373,22 @@ appcard.selected .card-title {
 }
 
 /* ==========================================================================
-   Checks, radios, switches — squared off
+   Checks (square), radios (circular), switches
    ========================================================================== */
 
-check,
+check {
+    min-width: 16px;
+    min-height: 16px;
+    background-color: @surface;
+    border: 1px solid @border_hi;
+    transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+/* Radios keep their circular shape — override the global border-radius: 0 reset. */
 radio {
     min-width: 16px;
     min-height: 16px;
+    border-radius: 50%;
     background-color: @surface;
     border: 1px solid @border_hi;
     transition: background-color 120ms ease, border-color 120ms ease;
@@ -385,24 +399,22 @@ radio:hover {
     border-color: @text_dim;
 }
 
-check:checked,
-radio:checked {
+radio:hover {
+    border-radius: 50%;
+}
+
+check:checked {
     background-color: @accent;
     border-color: @accent;
     color: @on_accent;
 }
 
-/* The checked radio is the one thing the reset above cannot square: the theme
-   draws the dot as a circular SVG asset, not as a border-radius. Drop the asset
-   and paint a square block instead. The gradient is just a flat fill — it is
-   the only way to get a plain rectangle out of background-image, which is also
-   why this rule has to out-specify the `background-image: none` reset. */
+/* Circular radio checked — keep border-radius and let the theme draw its dot. */
 radio:checked {
-    -gtk-icon-source: none;
-    background-image: linear-gradient(to bottom, @on_accent, @on_accent);
-    background-size: 8px 8px;
-    background-position: center;
-    background-repeat: no-repeat;
+    border-radius: 50%;
+    background-color: @accent;
+    border-color: @accent;
+    color: @on_accent;
 }
 
 switch {
