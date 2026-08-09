@@ -64,6 +64,7 @@ struct _NekoStoreWindow {
     GList *apps_to_install;
     GList *current_installing;
     guint pulse_id;
+    gboolean installing;
 };
 
 G_DEFINE_TYPE (NekoStoreWindow, neko_store_window, GTK_TYPE_APPLICATION_WINDOW)
@@ -261,24 +262,58 @@ static void install_next_app(NekoStoreWindow *self) {
         install_app_async(info->install_command, install_progress_cb, install_finished_cb, self);
     } else {
         // Finished everything
+        self->installing = FALSE;
         if (self->pulse_id > 0) {
             g_source_remove(self->pulse_id);
             self->pulse_id = 0;
         }
         gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(self->progress_bar), 1.0);
-        gtk_label_set_text(GTK_LABEL(self->finished_label), "Neko Void is ready! you can close this window");
+
+        // Report which apps did not install; a silent "ready!" hides failures.
+        GList *failed = NULL;
+        for (GList *l = self->apps_to_install; l != NULL; l = l->next) {
+            AppInfo *info = (AppInfo *)l->data;
+            if (!info->install_success) {
+                failed = g_list_append(failed, info);
+            }
+        }
+        if (failed) {
+            GString *s = g_string_new("Some apps failed to install:\n");
+            for (GList *l = failed; l != NULL; l = l->next) {
+                AppInfo *info = (AppInfo *)l->data;
+                g_string_append_printf(s, "\n• %s", info->name);
+            }
+            gtk_label_set_text(GTK_LABEL(self->finished_label), s->str);
+            g_string_free(s, TRUE);
+            g_list_free(failed);
+        } else {
+            gtk_label_set_text(GTK_LABEL(self->finished_label), "Neko Void is ready! you can close this window");
+        }
         gtk_label_set_text(GTK_LABEL(self->status_label), "All installations finished.");
     }
 }
 
 static void system_update_finished_cb(gboolean success, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    if (!success) {
+        gtk_label_set_text(GTK_LABEL(self->status_label), "System update failed, continuing with apps...");
+    } else {
+        gtk_label_set_text(GTK_LABEL(self->status_label), "System update OK, installing apps...");
+    }
     gtk_label_set_text(GTK_LABEL(self->finished_label), "Installing Apps...");
     install_next_app(self);
 }
 
 static void on_install_selected_clicked(GtkButton *btn, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+
+    // An install run is already in progress (the user can navigate back while
+    // apps are installing): starting a second chain would make both runs share
+    // current_installing and advance the same list, skipping apps.
+    if (self->installing) {
+        return;
+    }
+    self->installing = TRUE;
 
     // Gather ALL selected apps from all categories
     g_list_free(self->apps_to_install);
