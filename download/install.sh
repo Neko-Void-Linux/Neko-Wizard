@@ -41,7 +41,7 @@ list_apps() {
         spotify vesktop waterfox brave zerotierone telegram vivaldi chromium \
         onlyoffice kate libreoffice \
         bluetooth printer amd intel nvidia-open nvidia-latest nvidia-580 nvidia-470 nvidia-390 \
-        gufw clamav
+        gufw
 }
 
 # ------------------------------------------------------------------------------
@@ -65,8 +65,8 @@ install_heroic() {
 }
 
 install_lutris() {
-    log "Installing Lutris (Flatpak)..."
-    flatpak install flathub net.lutris.Lutris -y
+    log "Installing Lutris..."
+    pkexec xbps-install -Sy lutris
 }
 
 install_hytale() {
@@ -81,19 +81,37 @@ install_trinity() {
 }
 
 install_prismlauncher() {
-    log "Installing PrismLauncher (Flatpak)..."
-    flatpak install flathub org.prismlauncher.PrismLauncher -y
+    log "Installing PrismLauncher..."
+    pkexec xbps-install -Sy PrismLauncher
 }
 
 install_pineconemc() {
-    log "Installing PineconeMC (Flatpak)..."
-    wget -O /tmp/pinecone.flatpakref https://elyprismlauncher.github.io/flatpak/elyprismlauncher.flatpakref \
-        && flatpak install /tmp/pinecone.flatpakref -y
+    # PineconeMC ships as an AppImage; AppImageLauncher Lite integrates it into
+    # the desktop menu. Both are user-level (no pkexec needed).
+    local dir="$HOME/apps"
+    local launcher="$dir/appimagelauncher-lite.AppImage"
+    local pinecone="$dir/PineconeMC-Linux-x86_64.AppImage"
+
+    log "Downloading AppImageLauncher..."
+    mkdir -p "$dir" || die "Could not create $dir"
+    curl -fsSL -o "$launcher" \
+        "https://github.com/TheAssassin/AppImageLauncher/releases/download/v3.0.0-beta-3/appimagelauncher-lite-3.0.0-beta-2-gha287-x86_64.AppImage" \
+        || die "Failed to download AppImageLauncher"
+    chmod +x "$launcher"
+
+    log "Downloading PineconeMC..."
+    curl -fsSL -o "$pinecone" \
+        "https://github.com/ElyPrismLauncher/Launcher/releases/download/11.0.3/PineconeMC-Linux-x86_64.AppImage" \
+        || die "Failed to download PineconeMC"
+    chmod +x "$pinecone"
+
+    log "Integrating PineconeMC into the desktop (AppImageLauncher)..."
+    "$launcher" cli integrate "$pinecone"
 }
 
 install_protonup() {
-    log "Installing ProtonUp-Qt (Flatpak)..."
-    flatpak install flathub net.davidotek.pupgui2 -y
+    log "Installing ProtonUp-Qt..."
+    pkexec xbps-install -Sy protonup-qt
 }
 
 install_faugus() {
@@ -111,18 +129,18 @@ install_reaper() {
 }
 
 install_obs() {
-    log "Installing OBS Studio (Flatpak)..."
-    flatpak install flathub com.obsproject.Studio -y
+    log "Installing OBS Studio..."
+    pkexec xbps-install -Sy obs
 }
 
 install_kdenlive() {
-    log "Installing Kdenlive (Flatpak)..."
-    flatpak install flathub org.kde.kdenlive -y
+    log "Installing Kdenlive..."
+    pkexec xbps-install -Sy kdenlive
 }
 
 install_openshot() {
-    log "Installing OpenShot (Flatpak)..."
-    flatpak install flathub org.openshot.OpenShot -y
+    log "Installing OpenShot..."
+    pkexec xbps-install -Sy openshot
 }
 
 install_vlc() {
@@ -150,8 +168,8 @@ install_blender() {
 # ------------------------------------------------------------------------------
 
 install_krita() {
-    log "Installing Krita (Flatpak)..."
-    flatpak install flathub org.kde.krita -y
+    log "Installing Krita..."
+    pkexec xbps-install -Sy krita
 }
 
 install_gimp() {
@@ -194,8 +212,8 @@ install_zerotierone() {
 }
 
 install_telegram() {
-    log "Installing Telegram (Flatpak)..."
-    flatpak install flathub org.telegram.desktop -y
+    log "Installing Telegram..."
+    pkexec xbps-install -Sy telegram-desktop
 }
 
 install_vivaldi() {
@@ -213,8 +231,28 @@ install_chromium() {
 # ------------------------------------------------------------------------------
 
 install_onlyoffice() {
-    log "Installing OnlyOffice (Flatpak)..."
-    flatpak install flathub org.onlyoffice.desktopeditors -y
+    # OnlyOffice ships as an AppImage; AppImageLauncher Lite integrates it into
+    # the desktop menu. Both are user-level (no pkexec needed).
+    # Note: "cli integrate" works without systemd (important on Void/runit).
+    local dir="$HOME/apps"
+    local launcher="$dir/appimagelauncher-lite.AppImage"
+    local editors="$dir/DesktopEditors-x86_64.AppImage"
+
+    log "Downloading AppImageLauncher..."
+    mkdir -p "$dir" || die "Could not create $dir"
+    curl -fsSL -o "$launcher" \
+        "https://github.com/TheAssassin/AppImageLauncher/releases/download/v3.0.0-beta-3/appimagelauncher-lite-3.0.0-beta-2-gha287-x86_64.AppImage" \
+        || die "Failed to download AppImageLauncher"
+    chmod +x "$launcher"
+
+    log "Downloading OnlyOffice..."
+    curl -fsSL -o "$editors" \
+        "https://github.com/ONLYOFFICE/appimage-desktopeditors/releases/download/v9.4.0/DesktopEditors-x86_64.AppImage" \
+        || die "Failed to download OnlyOffice"
+    chmod +x "$editors"
+
+    log "Integrating OnlyOffice into the desktop (AppImageLauncher)..."
+    "$launcher" cli integrate "$editors"
 }
 
 install_kate() {
@@ -294,13 +332,6 @@ install_gufw() {
         && pkexec ufw enable
 }
 
-install_clamav() {
-    log "Installing ClamAV + ClamUI..."
-    pkexec xbps-install -Sy clamav \
-        && pkexec ln -s /etc/sv/clamd /var/service/ \
-        && flatpak install io.github.linx_systems.ClamUI -y
-}
-
 # ------------------------------------------------------------------------------
 # Dispatcher
 # ------------------------------------------------------------------------------
@@ -356,7 +387,6 @@ case "$APP" in
     nvidia-390)    install_nvidia_390 ;;
 
     gufw)          install_gufw ;;
-    clamav)        install_clamav ;;
 
     list)          list_apps ;;
     help|-h|--help) usage ;;

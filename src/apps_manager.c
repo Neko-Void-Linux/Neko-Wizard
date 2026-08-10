@@ -62,8 +62,7 @@ static AppInfo apps[] = {
     {"Nvidia Proprietary 390", "nvidia.png", INSTALL_APP("nvidia-390"), GROUP_DRIVERS, FALSE, FALSE},
 
     //SECURITY SECTION
-    {"GUFW (FIREWALL)", "firewall.png", INSTALL_APP("gufw"), GROUP_SECURITY, FALSE, FALSE},
-    {"CLAMAV + CLAMUI", "clamav.png", INSTALL_APP("clamav"), GROUP_SECURITY, FALSE, FALSE}
+    {"GUFW (FIREWALL)", "firewall.png", INSTALL_APP("gufw"), GROUP_SECURITY, FALSE, FALSE}
 };
 
 GList *get_all_apps(void) {
