@@ -22,6 +22,8 @@
 
 set -u
 
+nvidia_script="https://raw.githubusercontent.com/Neko-Void-Linux/nvidia-support/refs/heads/main/nvidia-config.sh"
+
 log() { printf '[neko] %s\n' "$*"; }
 die() { printf '[neko] ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -271,13 +273,13 @@ install_libreoffice() {
 
 install_bluetooth() {
     log "Enabling Bluetooth support..."
-    curl -fsSL -o /tmp/bluetooth-enable.sh https://codeberg.org/Neko-Void/bluetooth-enabler/raw/branch/main/install.sh \
+    curl -fsSL -o /tmp/bluetooth-enable.sh https://raw.githubusercontent.com/Neko-Void-Linux/bluetooth-enabler/refs/heads/main/install.sh \
         && pkexec bash /tmp/bluetooth-enable.sh
 }
 
 install_printer() {
     log "Enabling Printer support..."
-    curl -fsSL -o /tmp/printer-enable.sh https://codeberg.org/Neko-Void/printer-enable/raw/branch/main/enable.sh \
+    curl -fsSL -o /tmp/printer-enable.sh https://raw.githubusercontent.com/Neko-Void-Linux/printer-enable/refs/heads/main/enable.sh \
         && pkexec bash /tmp/printer-enable.sh
 }
 
@@ -293,31 +295,31 @@ install_intel() {
 
 install_nvidia_open() {
     log "Installing NVIDIA (open kernel modules)..."
-    curl -fsSL -o /tmp/nvidia-install.sh https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh \
+    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
         && pkexec bash /tmp/nvidia-install.sh open
 }
 
 install_nvidia_latest() {
     log "Installing NVIDIA (proprietary, latest)..."
-    curl -fsSL -o /tmp/nvidia-install.sh https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh \
+    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
         && pkexec bash /tmp/nvidia-install.sh latest
 }
 
 install_nvidia_580() {
     log "Installing NVIDIA (proprietary, 580 series)..."
-    curl -fsSL -o /tmp/nvidia-install.sh https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh \
+    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
         && pkexec bash /tmp/nvidia-install.sh 580
 }
 
 install_nvidia_470() {
     log "Installing NVIDIA (proprietary, 470 series)..."
-    curl -fsSL -o /tmp/nvidia-install.sh https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh \
+    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
         && pkexec bash /tmp/nvidia-install.sh 470
 }
 
 install_nvidia_390() {
     log "Installing NVIDIA (proprietary, 390 series)..."
-    curl -fsSL -o /tmp/nvidia-install.sh https://codeberg.org/Neko-Void/nvidia-support/raw/branch/main/install.sh \
+    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
         && pkexec bash /tmp/nvidia-install.sh 390
 }
 
