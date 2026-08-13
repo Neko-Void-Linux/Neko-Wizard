@@ -22,7 +22,7 @@
 
 set -u
 
-nvidia_script="https://raw.githubusercontent.com/Neko-Void-Linux/nvidia-support/refs/heads/main/nvidia-config.sh"
+nvidia_script="https://raw.githubusercontent.com/Neko-Void-Linux/nvidia-support/refs/heads/main/install.sh"
 
 log() { printf '[neko] %s\n' "$*"; }
 die() { printf '[neko] ERROR: %s\n' "$*" >&2; exit 1; }
