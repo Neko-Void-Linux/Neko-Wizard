@@ -22,8 +22,6 @@
 
 set -u
 
-nvidia_script="https://raw.githubusercontent.com/Neko-Void-Linux/nvidia-support/refs/heads/main/install.sh"
-
 log() { printf '[neko] %s\n' "$*"; }
 die() { printf '[neko] ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -293,35 +291,43 @@ install_intel() {
     pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-intel mesa-vulkan-intel-32bit linux-firmware-intel libva-intel-driver intel-media-driver mesa-intel-dri-32bit mesa-intel-dri
 }
 
+# Función auxiliar para descargar el repositorio de nvidia-support
+download_nvidia_support() {
+    log "Downloading NVIDIA support scripts..."
+    curl -fsSL -o /tmp/nvidia-support.tar.gz https://github.com/Neko-Void-Linux/nvidia-support/archive/refs/heads/main.tar.gz \
+        && tar -xzf /tmp/nvidia-support.tar.gz -C /tmp/
+}
+
 install_nvidia_open() {
+    download_nvidia_support
     log "Installing NVIDIA (open kernel modules)..."
-    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
-        && pkexec bash /tmp/nvidia-install.sh open
+    pkexec bash /tmp/nvidia-support-main/install.sh open
 }
 
 install_nvidia_latest() {
+    download_nvidia_support
     log "Installing NVIDIA (proprietary, latest)..."
-    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
-        && pkexec bash /tmp/nvidia-install.sh latest
+    pkexec bash /tmp/nvidia-support-main/install.sh latest
 }
 
 install_nvidia_580() {
+    download_nvidia_support
     log "Installing NVIDIA (proprietary, 580 series)..."
-    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
-        && pkexec bash /tmp/nvidia-install.sh 580
+    pkexec bash /tmp/nvidia-support-main/install.sh 580
 }
 
 install_nvidia_470() {
+    download_nvidia_support
     log "Installing NVIDIA (proprietary, 470 series)..."
-    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
-        && pkexec bash /tmp/nvidia-install.sh 470
+    pkexec bash /tmp/nvidia-support-main/install.sh 470
 }
 
 install_nvidia_390() {
+    download_nvidia_support
     log "Installing NVIDIA (proprietary, 390 series)..."
-    curl -fsSL -o /tmp/nvidia-install.sh $nvidia_script \
-        && pkexec bash /tmp/nvidia-install.sh 390
+    pkexec bash /tmp/nvidia-support-main/install.sh 390
 }
+
 
 # ------------------------------------------------------------------------------
 # Security
