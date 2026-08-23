@@ -77,6 +77,7 @@ install_hytale() {
 
 install_trinity() {
     log "Installing Trinity Launcher (Flatpak)..."
+    flatpak install flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
     flatpak install com.trench.trinity.launcher -y
 }
 
