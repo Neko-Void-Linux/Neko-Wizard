@@ -26,8 +26,12 @@ log() { printf '[neko] %s\n' "$*"; }
 die() { printf '[neko] ERROR: %s\n' "$*" >&2; exit 1; }
 
 flatpakcfg(){
-    pkexec flatpak remote-delete --force flathub
-    pkexec remote-add --if-not-exists --subset=verified flathub-verified https://flathub.org/repo/flathub.flatpakrepo
+    # Ensure the Flathub remote exists both at system and user level.
+    # Deleting 'flathub' and re-adding it as 'flathub-verified' broke every
+    # 'flatpak install flathub ...' below with "Remote flathub not found",
+    # so we keep the canonical name and simply add/refresh it.
+    pkexec flatpak remote-add --if-not-exists --system flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 }
 
 usage() {
@@ -84,8 +88,8 @@ install_hytale() {
 install_trinity() {
     log "Installing Trinity Launcher (Flatpak)..."
     $flatpakcfg
-    pkexec install flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
-    pkexec install com.trench.trinity.launcher -y
+    pkexec flatpak install flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
+    pkexec flatpak install flathub com.trench.trinity.launcher -y
 }
 
 install_prismlauncher() {
