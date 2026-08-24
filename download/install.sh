@@ -71,12 +71,14 @@ install_lutris() {
 
 install_hytale() {
     log "Installing Hytale Launcher (Flatpak)..."
+    flatpak remote-add --if-not-exists --subset=verified flathub-verified https://flathub.org/repo/flathub.flatpakrepo
     wget -O /tmp/tmp.flatpak https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak \
         && flatpak install /tmp/tmp.flatpak -y
 }
 
 install_trinity() {
     log "Installing Trinity Launcher (Flatpak)..."
+    flatpak remote-add --if-not-exists --subset=verified flathub-verified https://flathub.org/repo/flathub.flatpakrepo
     flatpak install flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
     flatpak install com.trench.trinity.launcher -y
 }
@@ -126,6 +128,7 @@ install_faugus() {
 
 install_reaper() {
     log "Installing Reaper (Flatpak)..."
+    flatpak remote-add --if-not-exists --subset=verified flathub-verified https://flathub.org/repo/flathub.flatpakrepo
     flatpak install flathub fm.reaper.Reaper -y
 }
 
@@ -189,6 +192,7 @@ install_inkscape() {
 
 install_spotify() {
     log "Installing Spotify (Flatpak)..."
+    flatpak remote-add --if-not-exists --subset=verified flathub-verified https://flathub.org/repo/flathub.flatpakrepo
     flatpak install flathub com.spotify.Client -y
 }
 
