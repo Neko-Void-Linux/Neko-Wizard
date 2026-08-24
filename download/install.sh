@@ -25,12 +25,11 @@ set -u
 log() { printf '[neko] %s\n' "$*"; }
 die() { printf '[neko] ERROR: %s\n' "$*" >&2; exit 1; }
 
-flatpakcfg(){
-    # Ensure the Flathub remote exists at user level. Deleting 'flathub' and
-    # re-adding it as 'flathub-verified' broke every 'flatpak install flathub ...'
-    # below with "Remote flathub not found", so we keep the canonical name and
-    # simply add/refresh it. User-level only: no pkexec needed.
-    flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+# Run a whole script under a single pkexec session. Flatpaks are installed
+# system-wide, so every flatpak command inside the script reuses the same
+# privileges and the polkit password prompt appears only once.
+as_root() {
+    pkexec bash -euc "$(cat)"
 }
 
 usage() {
@@ -78,19 +77,24 @@ install_lutris() {
 }
 
 install_hytale() {
-    flatpakcfg
     log "Installing Hytale Launcher (Flatpak)..."
     wget -O /tmp/tmp.flatpak https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak \
-        && flatpak install --user --reinstall /tmp/tmp.flatpak -y
+        || die "Failed to download Hytale Launcher"
+    as_root <<'ROOT'
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --reinstall /tmp/tmp.flatpak -y
+ROOT
 }
 
 install_trinity() {
-    flatpakcfg
     log "Installing Trinity Launcher (Flatpak)..."
-    flatpak remote-add --if-not-exists --user trinity \
-        https://huggingface.co/datasets/ccoffee20/flatpak/resolve/main/com.trench.trinity.launcher.flatpakrepo
-    flatpak install --user flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
-    flatpak install --user trinity com.trench.trinity.launcher -y
+    as_root <<'ROOT'
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --if-not-exists trinity \
+    https://huggingface.co/datasets/ccoffee20/flatpak/resolve/main/com.trench.trinity.launcher.flatpakrepo
+flatpak install flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
+flatpak install trinity com.trench.trinity.launcher -y
+ROOT
 }
 
 install_prismlauncher() {
@@ -138,8 +142,10 @@ install_faugus() {
 
 install_reaper() {
     log "Installing Reaper (Flatpak)..."
-    flatpakcfg
-    flatpak install --user flathub fm.reaper.Reaper -y
+    as_root <<'ROOT'
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install flathub fm.reaper.Reaper -y
+ROOT
 }
 
 install_obs() {
@@ -202,8 +208,10 @@ install_inkscape() {
 
 install_spotify() {
     log "Installing Spotify (Flatpak)..."
-    flatpakcfg
-    flatpak install --user flathub com.spotify.Client -y
+    as_root <<'ROOT'
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install flathub com.spotify.Client -y
+ROOT
 }
 
 install_vesktop() {
