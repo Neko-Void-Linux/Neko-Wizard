@@ -82,7 +82,7 @@ install_hytale() {
     flatpakcfg
     log "Installing Hytale Launcher (Flatpak)..."
     wget -O /tmp/tmp.flatpak https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak \
-        && pkexec flatpak install /tmp/tmp.flatpak -y
+        && pkexec flatpak install --reinstall /tmp/tmp.flatpak -y
 }
 
 install_trinity() {
