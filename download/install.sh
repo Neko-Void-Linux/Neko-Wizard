@@ -26,11 +26,10 @@ log() { printf '[neko] %s\n' "$*"; }
 die() { printf '[neko] ERROR: %s\n' "$*" >&2; exit 1; }
 
 flatpakcfg(){
-    # Ensure the Flathub remote exists both at system and user level.
-    # Deleting 'flathub' and re-adding it as 'flathub-verified' broke every
-    # 'flatpak install flathub ...' below with "Remote flathub not found",
-    # so we keep the canonical name and simply add/refresh it.
-    pkexec flatpak remote-add --if-not-exists --system flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    # Ensure the Flathub remote exists at user level. Deleting 'flathub' and
+    # re-adding it as 'flathub-verified' broke every 'flatpak install flathub ...'
+    # below with "Remote flathub not found", so we keep the canonical name and
+    # simply add/refresh it. User-level only: no pkexec needed.
     flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 }
 
@@ -82,16 +81,16 @@ install_hytale() {
     flatpakcfg
     log "Installing Hytale Launcher (Flatpak)..."
     wget -O /tmp/tmp.flatpak https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak \
-        && pkexec flatpak install --reinstall /tmp/tmp.flatpak -y
+        && flatpak install --user --reinstall /tmp/tmp.flatpak -y
 }
 
 install_trinity() {
     flatpakcfg
     log "Installing Trinity Launcher (Flatpak)..."
-    pkexec flatpak remote-add --if-not-exists --system trinity \
+    flatpak remote-add --if-not-exists --user trinity \
         https://huggingface.co/datasets/ccoffee20/flatpak/resolve/main/com.trench.trinity.launcher.flatpakrepo
-    pkexec flatpak install flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
-    pkexec flatpak install trinity com.trench.trinity.launcher -y
+    flatpak install --user flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
+    flatpak install --user trinity com.trench.trinity.launcher -y
 }
 
 install_prismlauncher() {
@@ -140,7 +139,7 @@ install_faugus() {
 install_reaper() {
     log "Installing Reaper (Flatpak)..."
     flatpakcfg
-    pkexec flatpak install flathub fm.reaper.Reaper -y
+    flatpak install --user flathub fm.reaper.Reaper -y
 }
 
 install_obs() {
@@ -204,7 +203,7 @@ install_inkscape() {
 install_spotify() {
     log "Installing Spotify (Flatpak)..."
     flatpakcfg
-    pkexec flatpak install flathub com.spotify.Client -y
+    flatpak install --user flathub com.spotify.Client -y
 }
 
 install_vesktop() {
