@@ -79,17 +79,19 @@ install_lutris() {
 }
 
 install_hytale() {
-    $flatpakcfg
+    flatpakcfg
     log "Installing Hytale Launcher (Flatpak)..."
     wget -O /tmp/tmp.flatpak https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak \
-        && flatpak install /tmp/tmp.flatpak -y
+        && pkexec flatpak install /tmp/tmp.flatpak -y
 }
 
 install_trinity() {
+    flatpakcfg
     log "Installing Trinity Launcher (Flatpak)..."
-    $flatpakcfg
+    pkexec flatpak remote-add --if-not-exists --system trinity \
+        https://huggingface.co/datasets/ccoffee20/flatpak/resolve/main/com.trench.trinity.launcher.flatpakrepo
     pkexec flatpak install flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
-    pkexec flatpak install flathub com.trench.trinity.launcher -y
+    pkexec flatpak install trinity com.trench.trinity.launcher -y
 }
 
 install_prismlauncher() {
@@ -137,7 +139,7 @@ install_faugus() {
 
 install_reaper() {
     log "Installing Reaper (Flatpak)..."
-    $flatpakcfg
+    flatpakcfg
     pkexec flatpak install flathub fm.reaper.Reaper -y
 }
 
@@ -201,7 +203,7 @@ install_inkscape() {
 
 install_spotify() {
     log "Installing Spotify (Flatpak)..."
-    $flatpakcfg
+    flatpakcfg
     pkexec flatpak install flathub com.spotify.Client -y
 }
 
