@@ -311,7 +311,8 @@ install_amd() {
 
 install_intel() {
     log "Installing Intel drivers..."
-    pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-intel mesa-vulkan-intel-32bit linux-firmware-intel libva-intel-driver intel-media-driver mesa-intel-dri-32bit mesa-intel-dri
+    pkexec xbps-remove -y libva-intel-driver intel-video-accel
+    pkexec xbps-install -Sy mesa-dri mesa-dri-32bit mesa-vulkan-intel mesa-vulkan-intel-32bit libva-intel-driver-irql linux-firmware-intel intel-media-driver mesa-intel-dri-32bit mesa-intel-dri
 }
 
 # Función auxiliar para descargar el repositorio de nvidia-support
