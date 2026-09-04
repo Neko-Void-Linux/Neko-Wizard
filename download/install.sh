@@ -141,11 +141,11 @@ install_faugus() {
 # ------------------------------------------------------------------------------
 
 install_reaper() {
-    log "Installing Reaper (Flatpak)..."
-    as_root <<'ROOT'
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install flathub fm.reaper.Reaper -y
-ROOT
+    log "Installing Reaper (Tarball)..."
+    curl -L -o /tmp/reaper.tar.xz https://github.com/Neko-Void-Linux/Neko-Wizard/releases/download/tars/reaper779_linux_x86_64.tar.xz && \
+    tar -xf /tmp/reaper.tar.xz -C /tmp && \
+    cd /tmp/reaper_linux_x86_64 && \
+    sh install-reaper.sh --install ~/opt --integrate-user-desktop --quiet
 }
 
 install_obs() {
