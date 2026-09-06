@@ -80,21 +80,17 @@ install_hytale() {
     log "Installing Hytale Launcher (Flatpak)..."
     wget -O /tmp/tmp.flatpak https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak \
         || die "Failed to download Hytale Launcher"
-    as_root <<'ROOT'
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install --reinstall /tmp/tmp.flatpak -y
-ROOT
+    flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    flatpak install --user --reinstall /tmp/tmp.flatpak -y
 }
 
 install_trinity() {
     log "Installing Trinity Launcher (Flatpak)..."
-    as_root <<'ROOT'
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak remote-add --if-not-exists trinity \
+    flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    flatpak remote-add --if-not-exists --user trinity \
     https://huggingface.co/datasets/ccoffee20/flatpak/resolve/main/com.trench.trinity.launcher.flatpakrepo
-flatpak install flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
-flatpak install trinity com.trench.trinity.launcher -y
-ROOT
+    flatpak install --user flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
+    flatpak install --user trinity com.trench.trinity.launcher -y
 }
 
 install_prismlauncher() {
@@ -141,11 +137,11 @@ install_faugus() {
 # ------------------------------------------------------------------------------
 
 install_reaper() {
-    log "Installing Reaper (Flatpak)..."
-    as_root <<'ROOT'
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install flathub fm.reaper.Reaper -y
-ROOT
+    log "Installing Reaper (Tarball)..."
+    curl -L -o /tmp/reaper.tar.xz https://github.com/Neko-Void-Linux/Neko-Wizard/releases/download/tars/reaper779_linux_x86_64.tar.xz && \
+    tar -xf /tmp/reaper.tar.xz -C /tmp && \
+    cd /tmp/reaper_linux_x86_64 && \
+    sh install-reaper.sh --install ~/opt --integrate-user-desktop --quiet
 }
 
 install_obs() {
@@ -208,10 +204,8 @@ install_inkscape() {
 
 install_spotify() {
     log "Installing Spotify (Flatpak)..."
-    as_root <<'ROOT'
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install flathub com.spotify.Client -y
-ROOT
+    flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    flatpak install --user flathub com.spotify.Client -y
 }
 
 install_vesktop() {
