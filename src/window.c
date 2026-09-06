@@ -6,7 +6,8 @@
 #include <gtk/gtk.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <pwd.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 #ifdef GDK_WINDOWING_X11
 #include <gdk/x11/gdkx.h>
@@ -18,12 +19,23 @@
 #define PAGE_PAD 24
 #define GRID_GAP 12
 
+typedef enum {
+    LANG_EN = 0,
+    LANG_ES,
+    LANG_JA,
+    LANG_IT
+} Language;
+
 struct _NekoStoreWindow {
     GtkApplicationWindow parent_instance;
     GtkWidget *stack;
 
     // Welcome Page
     GtkWidget *welcome_page;
+    GtkWidget *welcome_title;
+    GtkWidget *welcome_subtitle;
+    GtkWidget *start_btn;
+    GtkWidget *about_btn;
 
     // Apps Pages
     GtkWidget *gaming_page;
@@ -65,9 +77,21 @@ struct _NekoStoreWindow {
     GList *current_installing;
     guint pulse_id;
     gboolean installing;
+    int language;
+    GtkWidget *lang_btn;
 };
 
 G_DEFINE_TYPE (NekoStoreWindow, neko_store_window, GTK_TYPE_APPLICATION_WINDOW)
+
+static void term_log(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    char *msg = g_strdup_vprintf(fmt, args);
+    va_end(args);
+    g_print("%s\n", msg);
+    g_free(msg);
+    fflush(stdout);
+}
 
 // Live theme reload; see watch_user_theme() near the bottom of this file.
 static GtkCssProvider *theme_provider = NULL;
@@ -246,6 +270,8 @@ static void install_finished_cb(gboolean success, gpointer user_data) {
 static void install_progress_cb(const char *status_message, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
     if (status_message && g_utf8_validate(status_message, -1, NULL)) {
+        g_print("%s\n", status_message);
+        fflush(stdout);
         char *trunc = g_strndup(status_message, 60);
         gtk_label_set_text(GTK_LABEL(self->status_label), trunc);
         g_free(trunc);
@@ -258,6 +284,7 @@ static void install_next_app(NekoStoreWindow *self) {
         char *status = g_strdup_printf("Installing %s...", info->name);
         gtk_label_set_text(GTK_LABEL(self->status_label), status);
         g_free(status);
+        term_log("Installing %s...", info->name);
 
         install_app_async(info->install_command, install_progress_cb, install_finished_cb, self);
     } else {
@@ -269,7 +296,6 @@ static void install_next_app(NekoStoreWindow *self) {
         }
         gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(self->progress_bar), 1.0);
 
-        // Report which apps did not install; a silent "ready!" hides failures.
         GList *failed = NULL;
         for (GList *l = self->apps_to_install; l != NULL; l = l->next) {
             AppInfo *info = (AppInfo *)l->data;
@@ -278,17 +304,19 @@ static void install_next_app(NekoStoreWindow *self) {
             }
         }
         if (failed) {
-            GString *s = g_string_new("Some apps failed to install:\n");
+            g_print("\n");
+            term_log("Some apps reported a failure. Check the log above for details:");
             for (GList *l = failed; l != NULL; l = l->next) {
                 AppInfo *info = (AppInfo *)l->data;
-                g_string_append_printf(s, "\n• %s", info->name);
+                g_print("  - %s\n", info->name);
+                fflush(stdout);
             }
-            gtk_label_set_text(GTK_LABEL(self->finished_label), s->str);
-            g_string_free(s, TRUE);
             g_list_free(failed);
         } else {
-            gtk_label_set_text(GTK_LABEL(self->finished_label), "Neko Void is ready! you can close this window");
+            term_log("All selected apps installed successfully.");
         }
+        term_log("Neko Void is ready! you can close this window");
+        gtk_label_set_text(GTK_LABEL(self->finished_label), "Neko Void is ready! you can close this window");
         gtk_label_set_text(GTK_LABEL(self->status_label), "All installations finished.");
     }
 }
@@ -297,8 +325,10 @@ static void system_update_finished_cb(gboolean success, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
     if (!success) {
         gtk_label_set_text(GTK_LABEL(self->status_label), "System update failed, continuing with apps...");
+        term_log("System update failed, continuing with apps...");
     } else {
         gtk_label_set_text(GTK_LABEL(self->status_label), "System update OK, installing apps...");
+        term_log("System update OK, installing apps...");
     }
     gtk_label_set_text(GTK_LABEL(self->finished_label), "Installing Apps...");
     install_next_app(self);
@@ -337,63 +367,221 @@ static void on_install_selected_clicked(GtkButton *btn, gpointer user_data) {
     self->current_installing = self->apps_to_install;
     char *status = g_strdup("Running pkexec xbps-install -Syu...");
     gtk_label_set_text(GTK_LABEL(self->status_label), status);
+    g_print("\n");
+    term_log("Starting Neko Void setup with %d selected app(s)...", g_list_length(self->apps_to_install));
+    term_log("%s", status);
     g_free(status);
     install_app_async("pkexec xbps-install -y -Syu", install_progress_cb, system_update_finished_cb, self);
 }
 
-static gboolean on_language_switch_state_set(GtkSwitch *widget, gboolean state, gpointer user_data) {
-    // True = Spanish, False = English
+static void on_about_clicked(GtkButton *btn, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    (void)btn;
 
-    // The welcome page is the container, its second child is main_content.
-    GtkWidget *box = self->welcome_page;
-    GtkWidget *main_content = gtk_widget_get_last_child(box);
-
-    GtkWidget *icon = gtk_widget_get_first_child(main_content);
-    GtkWidget *title = gtk_widget_get_next_sibling(icon);
-    GtkWidget *subtitle = gtk_widget_get_next_sibling(title);
-    GtkWidget *btn = gtk_widget_get_last_child(main_content); // The button is the last child
-
-    if (state) {
-        gtk_label_set_text(GTK_LABEL(title), "Bienvenido a Neko Void");
-        gtk_label_set_text(GTK_LABEL(subtitle), "Preparemos su sistema con sus aplicaciones favoritas.");
-        gtk_button_set_label(GTK_BUTTON(btn), "Iniciar Configuración");
-    } else {
-        gtk_label_set_text(GTK_LABEL(title), "Welcome to Neko Void");
-        gtk_label_set_text(GTK_LABEL(subtitle), "Let's get your system ready with your favorite apps.");
-        gtk_button_set_label(GTK_BUTTON(btn), "Start Setup");
+    const char *title_text;
+    const char *license_text;
+    const char *desc;
+    const char *close_text;
+    switch (self->language) {
+        case LANG_ES:
+            title_text = "Acerca de Neko Void";
+            license_text = "Bajo la licencia WTFPL";
+            desc = "Un asistente sencillo e instalador de controladores, "
+                   "diseñado específicamente para Void Linux.\n"
+                   "Seleccione las aplicaciones que desee y Neko Void "
+                   "preparará su sistema.";
+            close_text = "Cerrar";
+            break;
+        case LANG_JA:
+            title_text = "Neko Void について";
+            license_text = "WTFPL ライセンスの下で公開";
+            desc = "Void Linux 専用に設計された、シンプルなウィザード兼"
+                   "ドライバーインストーラーです。\n"
+                   "インストールしたいアプリを選ぶだけで、"
+                   "Neko Void がシステムをセットアップします。";
+            close_text = "閉じる";
+            break;
+        case LANG_IT:
+            title_text = "Informazioni su Neko Void";
+            license_text = "Concesso in licenza WTFPL";
+            desc = "Una semplice procedura guidata e installer di driver, "
+                   "progettato appositamente per Void Linux.\n"
+                   "Seleziona le app che vuoi e Neko Void "
+                   "prepara il tuo sistema.";
+            close_text = "Chiudi";
+            break;
+        default:
+            title_text = "About Neko Void";
+            license_text = "Licensed under the WTFPL";
+            desc = "A straightforward wizard and driver installer "
+                   "designed specifically for Void Linux.\n"
+                   "Select the apps you want and Neko Void "
+                   "sets up your system.";
+            close_text = "Close";
+            break;
     }
 
-    gtk_switch_set_state(widget, state);
-    return TRUE;
+    GtkWidget *dialog = gtk_window_new();
+    gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(self));
+    gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+    gtk_window_set_title(GTK_WINDOW(dialog), title_text);
+    gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 400, -1);
+
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    gtk_widget_set_margin_top(box, 28);
+    gtk_widget_set_margin_bottom(box, 24);
+    gtk_widget_set_margin_start(box, 28);
+    gtk_widget_set_margin_end(box, 28);
+    gtk_window_set_child(GTK_WINDOW(dialog), box);
+
+    char *logo_path = get_resource_path("resources/logo.png");
+    GtkWidget *icon = gtk_image_new_from_file(logo_path);
+    g_free(logo_path);
+    gtk_image_set_pixel_size(GTK_IMAGE(icon), 96);
+    gtk_widget_set_halign(icon, GTK_ALIGN_CENTER);
+    gtk_box_append(GTK_BOX(box), icon);
+
+    GtkWidget *title = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(title), "<b>Neko Void</b>");
+    gtk_widget_add_css_class(title, "page-header");
+    gtk_label_set_justify(GTK_LABEL(title), GTK_JUSTIFY_CENTER);
+    gtk_box_append(GTK_BOX(box), title);
+
+    GtkWidget *license = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(license), license_text);
+    gtk_widget_add_css_class(license, "dim-label");
+    gtk_label_set_justify(GTK_LABEL(license), GTK_JUSTIFY_CENTER);
+    gtk_box_append(GTK_BOX(box), license);
+
+    GtkWidget *description = gtk_label_new(desc);
+    gtk_label_set_wrap(GTK_LABEL(description), TRUE);
+    gtk_label_set_justify(GTK_LABEL(description), GTK_JUSTIFY_CENTER);
+    gtk_widget_add_css_class(description, "dim-label");
+    gtk_widget_set_margin_top(description, 8);
+    gtk_box_append(GTK_BOX(box), description);
+
+    GtkWidget *close_btn = gtk_button_new_with_label(close_text);
+    gtk_widget_add_css_class(close_btn, "suggested-action");
+    gtk_widget_set_halign(close_btn, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_top(close_btn, 12);
+    g_signal_connect_swapped(close_btn, "clicked", G_CALLBACK(gtk_window_destroy), dialog);
+    gtk_box_append(GTK_BOX(box), close_btn);
+
+    gtk_window_present(GTK_WINDOW(dialog));
+}
+
+static void update_language(NekoStoreWindow *self, Language lang) {
+    self->language = lang;
+
+    const char *title;
+    const char *subtitle;
+    const char *start;
+    const char *about;
+    const char *lang_name;
+    switch (lang) {
+        case LANG_ES:
+            title = "Bienvenido a Neko Void";
+            subtitle = "Preparemos su sistema con sus aplicaciones favoritas.";
+            start = "Iniciar Configuración";
+            about = "Acerca de";
+            lang_name = "Español";
+            break;
+        case LANG_JA:
+            title = "Neko Void へようこそ";
+            subtitle = "お気に入りのアプリでシステムを準備しましょう。";
+            start = "セットアップを開始";
+            about = "このアプリについて";
+            lang_name = "日本語";
+            break;
+        case LANG_IT:
+            title = "Benvenuto a Neko Void";
+            subtitle = "Prepariamo il tuo sistema con le tue app preferite.";
+            start = "Avvia la configurazione";
+            about = "Informazioni";
+            lang_name = "Italiano";
+            break;
+        default:
+            title = "Welcome to Neko Void";
+            subtitle = "Let's get your system ready with your favorite apps.";
+            start = "Start Setup";
+            about = "About";
+            lang_name = "English";
+            break;
+    }
+
+    if (self->welcome_title) gtk_label_set_text(GTK_LABEL(self->welcome_title), title);
+    if (self->welcome_subtitle) gtk_label_set_text(GTK_LABEL(self->welcome_subtitle), subtitle);
+    if (self->start_btn) gtk_button_set_label(GTK_BUTTON(self->start_btn), start);
+    if (self->about_btn) gtk_button_set_label(GTK_BUTTON(self->about_btn), about);
+    if (self->lang_btn) gtk_menu_button_set_label(GTK_MENU_BUTTON(self->lang_btn), lang_name);
+}
+
+static void on_language_option_toggled(GtkCheckButton *btn, gpointer user_data) {
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    if (!gtk_check_button_get_active(btn)) return;
+
+    update_language(self, GPOINTER_TO_INT(g_object_get_data(G_OBJECT(btn), "lang")));
+
+    GtkWidget *popover = GTK_WIDGET(g_object_get_data(G_OBJECT(btn), "popover"));
+    if (popover) gtk_popover_popdown(GTK_POPOVER(popover));
 }
 
 static void build_welcome_page(NekoStoreWindow *self) {
-    // Top bar. The dark/light switch used to live here; the palette now comes
-    // from the system theme (see the theme bridge in data/style.css), so the
-    // language switch is all that is left.
+    // Top bar: About on the left, language picker on the right.
     GtkWidget *top_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
     gtk_widget_set_valign(top_bar, GTK_ALIGN_START);
     gtk_widget_set_hexpand(top_bar, TRUE);
 
-    // Language switch (Right)
+    self->about_btn = gtk_button_new_with_label("About");
+    gtk_widget_add_css_class(self->about_btn, "about-btn");
+    gtk_widget_set_valign(self->about_btn, GTK_ALIGN_CENTER);
+    g_signal_connect(self->about_btn, "clicked", G_CALLBACK(on_about_clicked), self);
+    gtk_box_append(GTK_BOX(top_bar), self->about_btn);
+
     GtkWidget *lang_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     gtk_widget_set_halign(lang_box, GTK_ALIGN_END);
     gtk_widget_set_hexpand(lang_box, TRUE);
-    GtkWidget *lang_label_en = gtk_label_new("EN");
-    gtk_widget_add_css_class(lang_label_en, "lang-label");
-    GtkWidget *lang_switch = gtk_switch_new();
-    GtkWidget *lang_label_es = gtk_label_new("ES");
-    gtk_widget_add_css_class(lang_label_es, "lang-label");
-    g_signal_connect(lang_switch, "state-set", G_CALLBACK(on_language_switch_state_set), self);
-    gtk_box_append(GTK_BOX(lang_box), lang_label_en);
-    gtk_box_append(GTK_BOX(lang_box), lang_switch);
-    gtk_box_append(GTK_BOX(lang_box), lang_label_es);
+    gtk_widget_set_valign(lang_box, GTK_ALIGN_CENTER);
+
+    GtkWidget *lang_popover = gtk_popover_new();
+    GtkWidget *lang_list = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_popover_set_child(GTK_POPOVER(lang_popover), lang_list);
+
+    GtkWidget *lang_en = gtk_check_button_new_with_label("English");
+    GtkWidget *lang_es = gtk_check_button_new_with_label("Español");
+    GtkWidget *lang_ja = gtk_check_button_new_with_label("日本語");
+    GtkWidget *lang_it = gtk_check_button_new_with_label("Italiano");
+    gtk_check_button_set_group(GTK_CHECK_BUTTON(lang_es), GTK_CHECK_BUTTON(lang_en));
+    gtk_check_button_set_group(GTK_CHECK_BUTTON(lang_ja), GTK_CHECK_BUTTON(lang_en));
+    gtk_check_button_set_group(GTK_CHECK_BUTTON(lang_it), GTK_CHECK_BUTTON(lang_en));
+    gtk_check_button_set_active(GTK_CHECK_BUTTON(lang_en), TRUE);
+    g_object_set_data(G_OBJECT(lang_en), "lang", GINT_TO_POINTER(LANG_EN));
+    g_object_set_data(G_OBJECT(lang_es), "lang", GINT_TO_POINTER(LANG_ES));
+    g_object_set_data(G_OBJECT(lang_ja), "lang", GINT_TO_POINTER(LANG_JA));
+    g_object_set_data(G_OBJECT(lang_it), "lang", GINT_TO_POINTER(LANG_IT));
+    g_object_set_data(G_OBJECT(lang_en), "popover", lang_popover);
+    g_object_set_data(G_OBJECT(lang_es), "popover", lang_popover);
+    g_object_set_data(G_OBJECT(lang_ja), "popover", lang_popover);
+    g_object_set_data(G_OBJECT(lang_it), "popover", lang_popover);
+    g_signal_connect(lang_en, "toggled", G_CALLBACK(on_language_option_toggled), self);
+    g_signal_connect(lang_es, "toggled", G_CALLBACK(on_language_option_toggled), self);
+    g_signal_connect(lang_ja, "toggled", G_CALLBACK(on_language_option_toggled), self);
+    g_signal_connect(lang_it, "toggled", G_CALLBACK(on_language_option_toggled), self);
+    gtk_box_append(GTK_BOX(lang_list), lang_en);
+    gtk_box_append(GTK_BOX(lang_list), lang_es);
+    gtk_box_append(GTK_BOX(lang_list), lang_ja);
+    gtk_box_append(GTK_BOX(lang_list), lang_it);
+
+    self->lang_btn = gtk_menu_button_new();
+    gtk_menu_button_set_label(GTK_MENU_BUTTON(self->lang_btn), "English");
+    gtk_widget_add_css_class(self->lang_btn, "lang-btn");
+    gtk_widget_set_valign(self->lang_btn, GTK_ALIGN_CENTER);
+    gtk_menu_button_set_popover(GTK_MENU_BUTTON(self->lang_btn), lang_popover);
+    gtk_box_append(GTK_BOX(lang_box), self->lang_btn);
 
     gtk_box_append(GTK_BOX(top_bar), lang_box);
 
-    // Child order here is load-bearing: on_language_switch_state_set() walks it
-    // by position (icon, title, subtitle, ... , button-as-last-child).
     // Vertical rhythm comes from the CSS margins, hence spacing 0.
     GtkWidget *main_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_halign(main_content, GTK_ALIGN_CENTER);
@@ -407,22 +595,22 @@ static void build_welcome_page(NekoStoreWindow *self) {
     gtk_image_set_pixel_size(GTK_IMAGE(icon), 128);
     gtk_widget_add_css_class(icon, "welcome-icon");
 
-    GtkWidget *title = gtk_label_new("Welcome to Neko Void");
-    gtk_widget_add_css_class(title, "welcome-title");
+    self->welcome_title = gtk_label_new("Welcome to Neko Void");
+    gtk_widget_add_css_class(self->welcome_title, "welcome-title");
 
-    GtkWidget *subtitle = gtk_label_new("Let's get your system ready with your favorite apps.");
-    gtk_widget_add_css_class(subtitle, "welcome-subtitle");
+    self->welcome_subtitle = gtk_label_new("Let's get your system ready with your favorite apps.");
+    gtk_widget_add_css_class(self->welcome_subtitle, "welcome-subtitle");
 
-    GtkWidget *btn = gtk_button_new_with_label("Start Setup");
-    gtk_widget_add_css_class(btn, "suggested-action");
-    gtk_widget_add_css_class(btn, "start-btn");
-    gtk_widget_set_halign(btn, GTK_ALIGN_CENTER);
-    g_signal_connect(btn, "clicked", G_CALLBACK(go_to_mirror_page), self);
+    self->start_btn = gtk_button_new_with_label("Start Setup");
+    gtk_widget_add_css_class(self->start_btn, "suggested-action");
+    gtk_widget_add_css_class(self->start_btn, "start-btn");
+    gtk_widget_set_halign(self->start_btn, GTK_ALIGN_CENTER);
+    g_signal_connect(self->start_btn, "clicked", G_CALLBACK(go_to_mirror_page), self);
 
     gtk_box_append(GTK_BOX(main_content), icon);
-    gtk_box_append(GTK_BOX(main_content), title);
-    gtk_box_append(GTK_BOX(main_content), subtitle);
-    gtk_box_append(GTK_BOX(main_content), btn);
+    gtk_box_append(GTK_BOX(main_content), self->welcome_title);
+    gtk_box_append(GTK_BOX(main_content), self->welcome_subtitle);
+    gtk_box_append(GTK_BOX(main_content), self->start_btn);
 
     // Assemble the whole structure
     // We want the top bar at the strict top, and main content centered.
@@ -839,6 +1027,15 @@ static void watch_user_theme(void) {
     }
 }
 
+static void force_square_corners(void) {
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_string(provider, "* { border-radius: 0; }");
+    gtk_style_context_add_provider_for_display(gdk_display_get_default(),
+                                               GTK_STYLE_PROVIDER(provider),
+                                               GTK_STYLE_PROVIDER_PRIORITY_USER + 2);
+    g_object_unref(provider);
+}
+
 static void neko_store_window_class_init (NekoStoreWindowClass *klass) {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
     object_class->dispose = neko_store_window_dispose;
@@ -850,21 +1047,6 @@ NekoStoreWindow *neko_store_window_new (GtkApplication *app) {
     gtk_window_set_title (GTK_WINDOW (window), "Neko Void Setup");
     gtk_window_set_default_size (GTK_WINDOW (window), 1000, 700);
 
-    GtkWidget *header = gtk_header_bar_new();
-    gtk_window_set_titlebar(GTK_WINDOW(window), header);
-
-    // Provide a greeting
-    const char *homedir;
-    struct passwd *pw;
-    pw = getpwuid(getuid());
-    if (pw) {
-        char *greeting = g_strdup_printf("Neko Void - %s", pw->pw_name);
-        GtkWidget *label = gtk_label_new(greeting);
-        g_free(greeting);
-        gtk_widget_add_css_class(label, "title-label");
-        gtk_header_bar_set_title_widget(GTK_HEADER_BAR(header), label);
-    }
-
     GtkCssProvider *provider = gtk_css_provider_new();
     char *css_path = get_resource_path("data/style.css");
     GFile *css_file = g_file_new_for_path(css_path);
@@ -875,9 +1057,11 @@ NekoStoreWindow *neko_store_window_new (GtkApplication *app) {
     g_free(css_path);
 
     watch_user_theme();
+    force_square_corners();
 
     g_signal_connect(window, "map", G_CALLBACK(on_window_map), NULL);
 
+    gtk_window_maximize(GTK_WINDOW(window));
     gtk_window_present (GTK_WINDOW (window));
     return window;
 }

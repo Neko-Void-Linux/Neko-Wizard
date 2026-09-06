@@ -62,7 +62,8 @@
 
 /* --- Global reset ---------------------------------------------------------
    Provider priority (APPLICATION) beats the stock theme's specificity, so a
-   plain `*` is enough to flatten everything Adwaita adds.
+   plain `*` is enough to flatten everything Adwaita adds, including the rounded
+   corners it paints on buttons, cards and menus.
    background-image matters as much as the rest: Adwaita paints .suggested-action
    with a gradient *image* over the colour, which would otherwise sit on top of
    our flat accent and show through as a gradient on the primary buttons.
@@ -283,6 +284,45 @@ button.mirror-test-btn:hover {
     font-weight: 600;
     letter-spacing: 0.6px;
     color: @text_dim;
+}
+
+button.about-btn {
+    padding: 4px 10px;
+    font-size: 0.85em;
+    font-weight: 500;
+    background-color: transparent;
+    color: @text_dim;
+    border: none;
+}
+
+button.about-btn:hover {
+    background-color: @surface_hi;
+    color: @text;
+    border: none;
+}
+
+button.lang-btn {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px 12px;
+    font-size: 0.85em;
+    background-color: transparent;
+    border: none;
+    color: @text_dim;
+}
+
+button.lang-btn:hover {
+    background-color: @surface_hi;
+    color: @text;
+    border: none;
+}
+
+popover > box {
+    padding: 6px;
+}
+
+popover checkbutton {
+    padding: 6px 10px;
 }
 
 /* ==========================================================================
