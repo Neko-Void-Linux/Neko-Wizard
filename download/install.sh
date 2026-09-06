@@ -77,11 +77,8 @@ install_lutris() {
 }
 
 install_hytale() {
-    log "Installing Hytale Launcher (Flatpak)..."
-    wget -O /tmp/tmp.flatpak https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak \
-        || die "Failed to download Hytale Launcher"
-    flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-    flatpak install --user --reinstall /tmp/tmp.flatpak -y
+    log "Installing Hytale..."
+    pkexec xbps-install -Sy hytale-installer
 }
 
 install_trinity() {
