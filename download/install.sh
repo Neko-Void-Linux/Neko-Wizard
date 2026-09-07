@@ -58,7 +58,8 @@ list_apps() {
 install_steam() {
     log "Installing Steam (void-repo-nonfree + multilib + 32bit libs)..."
     pkexec xbps-install -Sy void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree \
-        && pkexec xbps-install -Sy steam-udev-rules MangoHud gamescope libGL-32bit libpulseaudio-32bit libtxc_dxtn-32bit mesa mesa-dri mesa-vulkan-radeon vulkan-loader mesa-32bit  libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit steam-bin
+        && pkexec xbps-install -Sy steam-udev-rules MangoHud gamescope libGL-32bit libpulseaudio-32bit libtxc_dxtn-32bit \
+        mesa mesa-dri mesa-vulkan-radeon vulkan-loader mesa-32bit  libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit steam-bin
 }
 
 install_portproton() {
