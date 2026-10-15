@@ -1,14 +1,4 @@
-/* ==========================================================================
-   Neko Wizard — minimal / flat / sharp
-   --------------------------------------------------------------------------
-   Design rules (keep these when editing):
-     · Radius   : 0 everywhere. No rounded corners, ever.
-     · Depth    : borders only. No box-shadow, no drop-shadow, no blur.
-     · Motion   : colour fades only. No transform, no lift, no scale.
-     · Spacing  : multiples of 4 — 4 / 8 / 12 / 16 / 24 / 32.
-     · Hierarchy: one accent colour, everything else is neutral.
-     · Colour   : never hard-code a hex outside the palette block below.
-   ========================================================================== */
+/* Neko Wizard: clear native controls, calm surfaces, and semantic theme colors. */
 
 /* --- Theme bridge ---------------------------------------------------------
    These are the standard libadwaita colour names. Noctalia's template
@@ -26,17 +16,19 @@
    the LEFT, GTK silently ignores these lines — the system values win.
    No hex codes, ever. The app always reflects the active system palette.
    -------------------------------------------------------------------------- */
-@define-color window_bg_color    @theme_bg_color;
-@define-color window_fg_color    @theme_fg_color;
-@define-color view_bg_color      @theme_base_color;
-@define-color view_fg_color      @theme_text_color;
-@define-color card_bg_color      @theme_base_color;
-@define-color headerbar_bg_color @theme_bg_color;
-@define-color headerbar_fg_color @theme_fg_color;
-@define-color accent_bg_color    @theme_selected_bg_color;
-@define-color accent_fg_color    @theme_selected_fg_color;
-@define-color error_bg_color     @error_color;
-@define-color error_fg_color     @theme_selected_fg_color;
+/* Use app-prefixed aliases so the app stylesheet can outrank desktop CSS
+   without shadowing Noctalia/libadwaita's semantic palette definitions. */
+@define-color nk_window_bg    @window_bg_color;
+@define-color nk_window_fg    @window_fg_color;
+@define-color nk_view_bg      @view_bg_color;
+@define-color nk_view_fg      @view_fg_color;
+@define-color nk_card_bg      @card_bg_color;
+@define-color nk_headerbar_bg @headerbar_bg_color;
+@define-color nk_headerbar_fg @headerbar_fg_color;
+@define-color nk_accent_bg    @accent_bg_color;
+@define-color nk_accent_fg    @accent_fg_color;
+@define-color nk_error_bg     @error_bg_color;
+@define-color nk_error_fg     @error_fg_color;
 
 /* --- Palette: semantic tokens ---------------------------------------------
    Everything below is expressed as a mix or alias of the bridge names above,
@@ -44,42 +36,61 @@
    GTK resolves these lazily, so Noctalia/libadwaita overrides propagate
    through the mix() calls automatically.
    -------------------------------------------------------------------------- */
-@define-color bg           @window_bg_color;
-@define-color surface      @card_bg_color;
-@define-color surface_hi   mix(@card_bg_color, @window_fg_color, 0.07);
-@define-color border       mix(@window_bg_color, @window_fg_color, 0.14);
-@define-color border_hi    mix(@window_bg_color, @window_fg_color, 0.28);
-@define-color text         @window_fg_color;
-@define-color text_soft    mix(@window_fg_color, @window_bg_color, 0.25);
-@define-color text_dim     mix(@window_fg_color, @window_bg_color, 0.45);
-@define-color accent       @accent_bg_color;
-@define-color accent_hi    mix(@accent_bg_color, @window_fg_color, 0.20);
-@define-color on_accent    @accent_fg_color;
+@define-color bg           @nk_window_bg;
+@define-color surface      @nk_card_bg;
+@define-color surface_hi   mix(@nk_card_bg, @nk_window_fg, 0.07);
+@define-color border       mix(@nk_window_bg, @nk_window_fg, 0.14);
+@define-color border_hi    mix(@nk_window_bg, @nk_window_fg, 0.28);
+@define-color text         @nk_window_fg;
+@define-color text_soft    mix(@nk_window_fg, @nk_window_bg, 0.25);
+@define-color text_dim     mix(@nk_window_fg, @nk_window_bg, 0.45);
+@define-color accent       @nk_accent_bg;
+@define-color accent_hi    mix(@nk_accent_bg, @nk_window_fg, 0.20);
+@define-color on_accent    @nk_accent_fg;
 
 /* The tokens above are derived symmetrically — border/hover mix *towards* the
    foreground, dim text mixes *towards* the background — so the same rules
    render correctly for dark or light system themes alike. */
 
-/* --- Global reset ---------------------------------------------------------
-   Provider priority (APPLICATION) beats the stock theme's specificity, so a
-   plain `*` is enough to flatten everything Adwaita adds, including the rounded
-   corners it paints on buttons, cards and menus.
-   background-image matters as much as the rest: Adwaita paints .suggested-action
-   with a gradient *image* over the colour, which would otherwise sit on top of
-   our flat accent and show through as a gradient on the primary buttons.
-   -------------------------------------------------------------------------- */
-* {
-    border-radius: 0;
-    box-shadow: none;
-    text-shadow: none;
-    -gtk-icon-shadow: none;
-    background-image: none;
-}
-
 window {
     background-color: @bg;
     color: @text;
-    font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
+    letter-spacing: 0;
+    border: none;
+    box-shadow: none;
+}
+
+/* The desktop may use CozetteVector globally. Keep that character in headings,
+   while prose and controls use a deliberately readable text face. */
+window label,
+window button,
+window entry,
+window checkbutton {
+    font-family: 'Noto Sans', sans-serif;
+}
+
+/* Some desktop themes draw borders as inset shadows instead of CSS borders.
+   Flatten only the app's decorative surfaces; native check/radio controls stay themed. */
+button,
+headerbar,
+.app-sidebar,
+.mirror-row,
+flowboxchild,
+progressbar trough,
+progressbar progress {
+    border: none;
+    box-shadow: none;
+    background-image: none;
+}
+
+/* The interface uses a deliberately squared visual language. Keep this
+   global guard so a desktop theme cannot reintroduce rounded widget corners
+   on entries, popovers, menus, or future components. */
+* {
+    border-radius: 0;
 }
 
 /* ==========================================================================
@@ -87,9 +98,9 @@ window {
    ========================================================================== */
 
 headerbar {
-    background-color: @headerbar_bg_color;
-    color: @headerbar_fg_color;
-    border-bottom: 1px solid @border;
+    background-color: @nk_headerbar_bg;
+    color: @nk_headerbar_fg;
+    border-bottom: none;
     min-height: 44px;
     padding: 0 8px;
 }
@@ -136,39 +147,40 @@ windowcontrols > button:active {
 }
 
 windowcontrols > button.close {
-    color: @error_bg_color;
+    color: @nk_error_bg;
 }
 
 windowcontrols > button.close:hover {
-    background-color: @error_bg_color;
-    color: @error_fg_color;
+    background-color: @nk_error_bg;
+    color: @nk_error_fg;
 }
 
 windowcontrols > button.close:active {
-    background-color: mix(@error_bg_color, @window_fg_color, 0.2);
-    color: @error_fg_color;
+    background-color: mix(@nk_error_bg, @nk_window_fg, 0.2);
+    color: @nk_error_fg;
 }
 
 /* ==========================================================================
    Buttons
    --------------------------------------------------------------------------
-   Note: the code adds .suggested-action *and* .start-btn / .install-selected-btn
+   Note: the code adds .suggested-action *and* .install-selected-btn
    to the same widget, so the primary rules below are written as `button.<class>`
    and placed after `button.suggested-action` to win on specificity.
    ========================================================================== */
 
 button {
-    padding: 8px 16px;
+    padding: 6px 12px;
+    min-height: 36px;
     font-weight: 500;
+    border-radius: 0;
     background-color: @surface;
     color: @text;
-    border: 1px solid @border;
-    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    border: none;
+    transition: background-color 120ms ease, color 120ms ease;
 }
 
 button:hover {
     background-color: @surface_hi;
-    border-color: @border_hi;
 }
 
 button:active {
@@ -176,20 +188,25 @@ button:active {
 }
 
 button:focus-visible {
-    outline: 1px solid @accent;
-    outline-offset: -3px;
+    outline: 2px solid @accent;
+    outline-offset: 2px;
+    background-color: @surface_hi;
+}
+
+button:disabled {
+    color: @text_dim;
+    opacity: 0.62;
 }
 
 /* Secondary — "Back" */
 button.suggested-action {
     background-color: transparent;
     color: @text_soft;
-    border: 1px solid @border;
+    border: none;
 }
 
 button.suggested-action:hover {
     background-color: @surface;
-    border-color: @border_hi;
     color: @text;
 }
 
@@ -197,62 +214,163 @@ button.suggested-action:active {
     background-color: @surface_hi;
 }
 
-/* Primary — "Start Setup". Same accent as "Next"/"Install", just bigger: it is
-   the theme's own accent colour, so it follows Noctalia and falls back to the
-   accent in the palette block above when no theme provider is present. */
-button.start-btn {
-    padding: 12px 40px;
+/* Welcome-center launchers: Mint-style links to focused system tools. */
+button.tool-launcher {
+    min-height: 44px;
+    padding: 6px 10px;
+    margin: 3px 0;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    transition: background-color 120ms ease;
+}
+
+button.tool-launcher:hover {
+    background-color: mix(@surface_hi, @accent, 0.10);
+}
+
+button.tool-launcher:focus-visible {
+    outline: 2px solid @accent;
+    outline-offset: 2px;
+    background-color: @surface_hi;
+}
+
+.tool-title {
+    font-family: 'CozetteVector', monospace;
+    font-size: 1.15em;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.03em;
+    color: @text;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+image.tool-icon {
+    color: @text_dim;
+}
+
+button.tool-launcher:hover image.tool-icon,
+button.tool-launcher:focus-visible image.tool-icon {
+    color: @accent;
+}
+
+.tool-description {
+    font-size: 0.95em;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    color: @text_soft;
+}
+
+.category-section-title {
+    color: @text_soft;
+    font-family: 'CozetteVector', monospace;
     font-size: 1em;
     font-weight: 600;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.category-rail {
+    padding-top: 4px;
+}
+
+button.category-button {
+    min-height: 60px;
+    padding: 6px 8px;
+    margin: 2px 0;
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+    color: @text;
+    transition: none;
+}
+
+button.category-button:hover {
+    background-color: @surface_hi;
+}
+
+button.category-button:checked {
+    background-color: mix(@bg, @accent, 0.15);
+}
+
+button.category-button:focus-visible {
+    outline: 2px solid @accent;
+    outline-offset: 2px;
+}
+
+.category-nav-title {
+    font-size: 0.98em;
+    font-weight: 600;
+    line-height: 1.3;
+    color: @text;
+}
+
+.category-count {
+    font-size: 0.95em;
+    line-height: 1.3;
+    color: @text_soft;
+}
+
+image.category-icon {
+    color: @text_soft;
+}
+
+button.category-button:checked image.category-icon,
+button.category-button:focus-visible image.category-icon {
+    color: @accent;
+}
+
+button.update-system-btn {
+    min-height: 40px;
+    padding: 6px 16px;
+    font-weight: 600;
     background-color: @accent;
     color: @on_accent;
-    border: 1px solid @accent;
+    border: none;
+    border-radius: 0;
 }
 
-button.start-btn:hover {
+button.update-system-btn:hover {
     background-color: @accent_hi;
-    border-color: @accent_hi;
-}
-
-button.start-btn:active {
-    background-color: @accent;
-    border-color: @accent;
 }
 
 /* Primary — "Next" / "Install" */
 button.install-selected-btn {
-    padding: 8px 24px;
+    min-height: 40px;
+    padding: 6px 18px;
     font-weight: 600;
     background-color: @accent;
     color: @on_accent;
-    border: 1px solid @accent;
+    border: none;
+    border-radius: 0;
 }
 
 button.install-selected-btn:hover {
     background-color: @accent_hi;
-    border-color: @accent_hi;
 }
 
 button.install-selected-btn:active {
     background-color: @accent;
-    border-color: @accent;
 }
 
 /* Small — "Test" on the mirror rows */
 button.mirror-test-btn {
+    min-height: 36px;
     padding: 4px 14px;
     font-size: 0.85em;
     font-weight: 500;
     letter-spacing: 0.3px;
     background-color: @border;
     color: @text_soft;
-    border: 1px solid @border_hi;
+    border: none;
+    border-radius: 0;
 }
 
 button.mirror-test-btn:hover {
     background-color: @border_hi;
-    border-color: @text_dim;
     color: @text;
 }
 
@@ -260,35 +378,144 @@ button.mirror-test-btn:hover {
    Welcome page
    ========================================================================== */
 
-.welcome-icon {
-    opacity: 0.9;
-}
-
 .welcome-title {
-    font-size: 2em;
+    font-family: 'CozetteVector', monospace;
+    font-size: 1.9em;
     font-weight: 700;
-    letter-spacing: -0.4px;
+    line-height: 1.5;
+    letter-spacing: 0.035em;
     color: @text;
-    margin-top: 24px;
+    margin-top: 12px;
+    padding-top: 2px;
+    padding-bottom: 3px;
 }
 
 .welcome-subtitle {
-    font-size: 1em;
-    color: @text_dim;
+    font-size: 1.12em;
+    line-height: 1.4;
+    letter-spacing: 0.025em;
+    color: @text_soft;
     margin-top: 8px;
-    margin-bottom: 32px;
+    margin-bottom: 8px;
+}
+
+.welcome-icon {
+    margin-bottom: 4px;
+}
+
+.welcome-description {
+    color: @text_soft;
+    font-size: 1em;
+    letter-spacing: 0.01em;
+    line-height: 1.5;
+}
+
+button.start-btn {
+    min-height: 40px;
+    padding: 6px 14px;
+    font-size: 1em;
+    line-height: 1.35;
+    letter-spacing: 0.025em;
+    background-color: @accent;
+    color: @on_accent;
+    border: none;
+    border-radius: 0;
+    font-weight: 600;
+}
+
+button.start-btn label {
+    line-height: 1.35;
+    padding: 0;
+}
+
+button.start-btn:hover {
+    background-color: @accent_hi;
+}
+
+/* Persistent Mint-style navigation: overview on the left, focused tool view
+   on the right. */
+.app-sidebar {
+    background-color: transparent;
+    border-right: none;
+    padding: 8px 8px 12px;
+}
+
+.sidebar-brand {
+    font-family: 'CozetteVector', monospace;
+    font-size: 1.12em;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.035em;
+    color: @text;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.sidebar-section-title {
+    color: @text_soft;
+    font-size: 0.88em;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 4px 0 2px;
+}
+
+button.sidebar-button {
+    min-height: 32px;
+    padding: 3px 8px;
+    margin: 2px 0;
+    font-size: 0.94em;
+    line-height: 1.3;
+    letter-spacing: 0.025em;
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+    color: @text_soft;
+}
+
+button.sidebar-button:hover {
+    background-color: @surface_hi;
+    color: @text;
+}
+
+button.sidebar-button:checked {
+    background-color: mix(@bg, @accent, 0.12);
+    color: @accent;
+    font-weight: 700;
+}
+
+button.sidebar-button:focus-visible {
+    outline: 2px solid @accent;
+    outline-offset: 2px;
+    box-shadow: none;
+    background-color: @surface_hi;
+    color: @accent;
+}
+
+/* Keep the theme from adding a second frame around the custom focus ring. */
+button.sidebar-button:focus,
+button.sidebar-button:checked:focus,
+button.sidebar-button:focus-visible,
+button.sidebar-button:checked:focus-visible {
+    border: none;
+    box-shadow: none;
+    background-image: none;
+}
+
+button.sidebar-button:checked:focus-visible {
+    background-color: mix(@bg, @accent, 0.12);
 }
 
 .lang-label {
-    font-size: 0.8em;
+    font-size: 0.9em;
     font-weight: 600;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.035em;
     color: @text_dim;
 }
 
 button.about-btn {
     padding: 4px 10px;
-    font-size: 0.85em;
+    font-size: 0.95em;
+    letter-spacing: 0.03em;
     font-weight: 500;
     background-color: transparent;
     color: @text_dim;
@@ -305,7 +532,8 @@ button.lang-btn {
     min-width: 32px;
     min-height: 32px;
     padding: 4px 12px;
-    font-size: 0.85em;
+    font-size: 0.95em;
+    letter-spacing: 0.025em;
     background-color: transparent;
     border: none;
     color: @text_dim;
@@ -330,25 +558,61 @@ popover checkbutton {
    ========================================================================== */
 
 .page-header {
-    font-size: 1.35em;
-    font-weight: 600;
-    letter-spacing: -0.2px;
+    font-family: 'CozetteVector', monospace;
+    font-size: 1.45em;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
     color: @text;
+    padding-top: 2px;
+    padding-bottom: 3px;
+}
+
+.category-page-title {
+    font-family: 'CozetteVector', monospace;
+    font-size: 1.25em;
+    font-weight: 700;
+    line-height: 1.5;
+    color: @text;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.selection-count {
+    color: @text_soft;
+    font-size: 0.95em;
+    font-weight: 600;
 }
 
 .page-desc {
-    font-size: 0.9em;
-    color: @text_dim;
+    font-size: 0.98em;
+    line-height: 1.5;
+    letter-spacing: 0.005em;
+    color: @text_soft;
 }
 
 .toolbar {
-    border-bottom: 1px solid @border;
-    padding-bottom: 12px;
+    padding-bottom: 8px;
 }
 
 .footer {
-    border-top: 1px solid @border;
-    padding-top: 16px;
+    padding-top: 8px;
+}
+
+.package-search {
+    min-height: 40px;
+}
+
+.selection-count,
+.numeric {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.95em;
+    font-weight: 600;
+}
+
+.empty-state {
+    color: @text_soft;
+    padding: 20px;
 }
 
 .group-title {
@@ -358,8 +622,8 @@ popover checkbutton {
 }
 
 .dim-label {
-    color: @text_dim;
-    font-size: 0.9em;
+    color: @text_soft;
+    font-size: 0.96em;
 }
 
 /* ==========================================================================
@@ -373,114 +637,77 @@ flowboxchild {
 }
 
 flowboxchild:focus-visible {
-    outline: 1px solid @accent;
-    outline-offset: -1px;
+    outline: none;
 }
 
-appcard {
+button.app-card {
+    min-height: 60px;
     background-color: @surface;
-    border: 1px solid @border;
-    padding: 20px 12px;
-    transition: background-color 120ms ease, border-color 120ms ease;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 0;
+    transition: background-color 120ms ease, color 120ms ease;
 }
 
-appcard:hover {
+button.app-card:hover {
     background-color: @surface_hi;
-    border-color: @border_hi;
 }
 
-appcard.selected {
+button.app-card:checked {
+    background-color: mix(@surface, @accent, 0.12);
+}
+
+button.app-card:focus-visible {
+    outline: 2px solid @accent;
+    outline-offset: 2px;
     background-color: @surface_hi;
-    border-color: @accent;
+}
+
+label.card-check {
+    min-width: 20px;
+    min-height: 20px;
+    padding: 2px;
+    color: @on_accent;
+    background-color: @accent;
+    border-radius: 0;
+    font-weight: 700;
 }
 
 .card-icon {
-    opacity: 0.9;
+    opacity: 1;
 }
 
-appcard.selected .card-icon {
+button.app-card:checked .card-icon {
     opacity: 1;
 }
 
 .card-title {
-    font-size: 0.9em;
-    font-weight: 500;
-    color: @text_soft;
-}
-
-appcard.selected .card-title {
+    font-size: 0.98em;
+    font-weight: 600;
+    line-height: 1.3;
     color: @text;
 }
 
-/* ==========================================================================
-   Checks (square), radios (circular), switches
-   ========================================================================== */
-
-check {
-    min-width: 16px;
-    min-height: 16px;
-    background-color: @surface;
-    border: 1px solid @border_hi;
-    transition: background-color 120ms ease, border-color 120ms ease;
+button.app-card:checked .card-title {
+    color: @text;
 }
 
-/* Radios keep their circular shape — override the global border-radius: 0 reset. */
-radio {
-    min-width: 16px;
-    min-height: 16px;
-    border-radius: 50%;
-    background-color: @surface;
-    border: 1px solid @border_hi;
-    transition: background-color 120ms ease, border-color 120ms ease;
+/* Keep interaction immediate without animated movement or decorative corners. */
+button.tool-launcher,
+button.sidebar-button,
+button.category-button,
+button.app-card,
+button.about-btn,
+button.lang-btn,
+button.suggested-action,
+button.mirror-test-btn,
+button.start-btn,
+button.update-system-btn,
+button.install-selected-btn {
+    transition: none;
 }
 
-check:hover,
-radio:hover {
-    border-color: @text_dim;
-}
-
-radio:hover {
-    border-radius: 50%;
-}
-
-check:checked {
-    background-color: @accent;
-    border-color: @accent;
-    color: @on_accent;
-}
-
-/* Circular radio checked — keep border-radius and let the theme draw its dot. */
-radio:checked {
-    border-radius: 50%;
-    background-color: @accent;
-    border-color: @accent;
-    color: @on_accent;
-}
-
-switch {
-    min-width: 40px;
-    min-height: 20px;
-    padding: 2px;
-    background-color: @surface;
-    border: 1px solid @border_hi;
-}
-
-switch:checked {
-    background-color: @accent;
-    border-color: @accent;
-}
-
-switch > slider {
-    min-width: 14px;
-    min-height: 14px;
-    margin: 0;
-    background-color: @text_soft;
-    border: none;
-}
-
-switch:checked > slider {
-    background-color: @on_accent;
-}
+/* Keep GTK's native checkbox/radio/switch rendering and accessibility states. */
 
 /* ==========================================================================
    Progress bar
@@ -489,7 +716,7 @@ switch:checked > slider {
 progressbar trough {
     min-height: 4px;
     background-color: @surface;
-    border: 1px solid @border;
+    border: none;
 }
 
 progressbar progress {
@@ -499,7 +726,7 @@ progressbar progress {
 }
 
 progressbar text {
-    font-size: 0.85em;
+    font-size: 0.9em;
     color: @text_dim;
 }
 
@@ -514,22 +741,21 @@ progressbar text {
    ========================================================================== */
 
 .mirror-section-header {
-    font-size: 0.85em;
+    font-size: 0.95em;
     font-weight: 600;
-    letter-spacing: 0.6px;
-    color: @text_dim;
+    letter-spacing: 0.04em;
+    color: @text_soft;
 }
 
 .mirror-row {
-    background-color: @surface;
-    border: 1px solid @border;
+    background-color: transparent;
+    border: none;
     padding: 10px 12px;
-    transition: background-color 120ms ease, border-color 120ms ease;
+    border-radius: 0;
 }
 
 .mirror-row:hover {
     background-color: @surface_hi;
-    border-color: @border_hi;
 }
 
 .mirror-name {
@@ -539,8 +765,9 @@ progressbar text {
 }
 
 .mirror-detail {
-    font-size: 0.8em;
-    color: @text_dim;
+    font-size: 0.95em;
+    letter-spacing: 0.015em;
+    color: @text_soft;
 }
 
 /* ==========================================================================

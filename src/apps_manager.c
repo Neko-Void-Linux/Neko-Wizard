@@ -55,14 +55,14 @@ static AppInfo apps[] = {
     {"Printer Support", "print.png", INSTALL_APP("printer"), GROUP_DRIVERS, FALSE, FALSE},
     {"AMD Drivers", "amd.png", INSTALL_APP("amd"), GROUP_DRIVERS, FALSE, FALSE},
     {"Intel Drivers", "intel.png", INSTALL_APP("intel"), GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Open", "nvidia.png", INSTALL_APP("nvidia-open"), GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Proprietary Lastest", "nvidia.png", INSTALL_APP("nvidia-latest"), GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Proprietary 580", "nvidia.png", INSTALL_APP("nvidia-580"), GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Proprietary 470", "nvidia.png", INSTALL_APP("nvidia-470"), GROUP_DRIVERS, FALSE, FALSE},
-    {"Nvidia Proprietary 390", "nvidia.png", INSTALL_APP("nvidia-390"), GROUP_DRIVERS, FALSE, FALSE},
+    {"NVIDIA Open", "nvidia.png", INSTALL_APP("nvidia-open"), GROUP_DRIVERS, FALSE, FALSE},
+    {"NVIDIA Proprietary — Latest", "nvidia.png", INSTALL_APP("nvidia-latest"), GROUP_DRIVERS, FALSE, FALSE},
+    {"NVIDIA Proprietary — 580", "nvidia.png", INSTALL_APP("nvidia-580"), GROUP_DRIVERS, FALSE, FALSE},
+    {"NVIDIA Proprietary — 470", "nvidia.png", INSTALL_APP("nvidia-470"), GROUP_DRIVERS, FALSE, FALSE},
+    {"NVIDIA Proprietary — 390", "nvidia.png", INSTALL_APP("nvidia-390"), GROUP_DRIVERS, FALSE, FALSE},
 
     //SECURITY SECTION
-    {"GUFW (FIREWALL)", "firewall.png", INSTALL_APP("gufw"), GROUP_SECURITY, FALSE, FALSE}
+    {"GUFW", "firewall.png", INSTALL_APP("gufw"), GROUP_SECURITY, FALSE, FALSE}
 };
 
 GList *get_all_apps(void) {
@@ -110,13 +110,5 @@ gchar *get_resource_path(const char *rel_path) {
     }
 
     g_free(path2); g_free(path3); g_free(path4);
-
-    gchar *path5 = g_build_filename("/home/javierc/Documentos/server/dev/Neko Store", rel_path, NULL);
-    if (g_file_test(path5, G_FILE_TEST_EXISTS)) {
-        g_free(path1);
-        return path5;
-    }
-    g_free(path5);
-
     return path1;
 }

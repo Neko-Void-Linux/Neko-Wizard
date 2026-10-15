@@ -1,0 +1,11 @@
+[Icon Theme]
+Name=Neko Wizard
+Comment=Pixelarticons for Neko Wizard
+Directories=scalable/actions
+
+[scalable/actions]
+Size=24
+Type=Scalable
+MinSize=16
+MaxSize=48
+Context=Actions
