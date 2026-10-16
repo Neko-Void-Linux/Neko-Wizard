@@ -137,6 +137,17 @@ static const char *ui_tr(Language lang, const char *english) {
     return english;
 }
 
+static Language detect_language(void) {
+    const char * const *names = g_get_language_names();
+    for (int i = 0; names != NULL && names[i] != NULL; ++i) {
+        if (g_str_has_prefix(names[i], "es")) return LANG_ES;
+        if (g_str_has_prefix(names[i], "ja")) return LANG_JA;
+        if (g_str_has_prefix(names[i], "it")) return LANG_IT;
+        if (g_str_has_prefix(names[i], "en")) return LANG_EN;
+    }
+    return LANG_EN;
+}
+
 typedef enum { UI_LABEL, UI_BUTTON, UI_CHECK, UI_PLACEHOLDER, UI_ACCESSIBLE, UI_TOOLTIP } UiTextKind;
 typedef struct {
     GtkWidget *widget;
@@ -165,7 +176,6 @@ struct _NekoStoreWindow {
     GtkWidget *update_page;
     GPtrArray *navigation_buttons;
 
-    // Welcome Page
     GtkWidget *welcome_page;
     GtkWidget *apps_home_page;
     GtkWidget *category_stack;
@@ -177,7 +187,6 @@ struct _NekoStoreWindow {
     GtkWidget *welcome_start_btn;
     GtkWidget *about_btn;
 
-    // Apps Pages
     GtkWidget *gaming_page;
     GtkWidget *gaming_flowbox;
 
@@ -193,15 +202,12 @@ struct _NekoStoreWindow {
     GtkWidget *social_page;
     GtkWidget *social_flowbox;
 
-    // Drivers Page
     GtkWidget *drivers_page;
     GtkWidget *drivers_flowbox;
 
-    // Security Page
     GtkWidget *security_page;
     GtkWidget *security_flowbox;
 
-    // Finished Page
     GtkWidget *finished_page;
     GtkWidget *finished_label;
     GtkWidget *progress_bar;
@@ -209,15 +215,14 @@ struct _NekoStoreWindow {
     GtkWidget *finished_back_btn;
     char *finished_return_page_name;
 
-    // Mirror Page
     GtkWidget *mirror_page;
     GtkWidget *mirror_status_label;
     MirrorInfo *selected_mirror;
 
-    // Installer State
     GList *apps_to_install;
     GList *current_installing;
     gboolean installing;
+    gboolean bulk_update;
     guint pulse_id;
     int language;
     GtkWidget *lang_btn;
@@ -283,29 +288,28 @@ static void term_log(const char *fmt, ...) {
 }
 
 static void update_selection_count_labels(NekoStoreWindow *self) {
-    // The install buttons act on every category, so they are enabled whenever
-    // there is at least one selected item anywhere.
+    // Single pass over the catalog: per-group totals and selections are reused
+    // by every label, instead of re-walking the list for each one.
+    int group_total[GROUP_SECURITY + 1] = {0};
+    int group_selected[GROUP_SECURITY + 1] = {0};
     int global_selected = 0;
-    GList *all_apps = get_all_apps();
-    for (GList *l = all_apps; l != NULL; l = l->next) {
+
+    GList *apps = get_all_apps();
+    for (GList *l = apps; l != NULL; l = l->next) {
         AppInfo *info = l->data;
-        if (info->selected)
-            ++global_selected;
+        group_total[info->group]++;
+        if (info->selected) {
+            group_selected[info->group]++;
+            global_selected++;
+        }
     }
-    g_list_free(all_apps);
+    g_list_free(apps);
 
     for (guint i = 0; self->selection_count_labels && i < self->selection_count_labels->len; ++i) {
         GtkWidget *label = g_ptr_array_index(self->selection_count_labels, i);
         int group_value = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(label), "count-group"));
         AppGroup group = (AppGroup)(group_value - 1);
-        int selected_count = 0;
-        GList *apps = get_all_apps();
-        for (GList *l = apps; l != NULL; l = l->next) {
-            AppInfo *info = l->data;
-            if (info->selected && info->group == group)
-                ++selected_count;
-        }
-        g_list_free(apps);
+        int selected_count = group_selected[group];
         char *summary = g_strdup_printf(ui_tr((Language)self->language, "%d selected"), selected_count);
         gtk_label_set_text(GTK_LABEL(label), summary);
         g_free(summary);
@@ -321,16 +325,8 @@ static void update_selection_count_labels(NekoStoreWindow *self) {
         GtkWidget *label = g_ptr_array_index(self->category_count_labels, i);
         int group_value = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(label), "count-group"));
         AppGroup group = (AppGroup)(group_value - 1);
-        int total = 0;
-        int selected = 0;
-        GList *apps = get_all_apps();
-        for (GList *l = apps; l != NULL; l = l->next) {
-            AppInfo *info = l->data;
-            if (info->group != group) continue;
-            total++;
-            if (info->selected) selected++;
-        }
-        g_list_free(apps);
+        int total = group_total[group];
+        int selected = group_selected[group];
         const char *format = selected > 0
             ? (total == 1 ? "%d app · %d selected" : "%d apps · %d selected")
             : (total == 1 ? "%d app" : "%d apps");
@@ -343,6 +339,11 @@ static void update_selection_count_labels(NekoStoreWindow *self) {
 }
 
 static void on_app_card_toggled(GtkToggleButton *button, gpointer user_data) {
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    // Bulk operations (Select all) update the labels once at the end.
+    if (self->bulk_update)
+        return;
+
     GtkWidget *select_all = g_object_get_data(G_OBJECT(button), "select-all");
     if (select_all) {
         GtkWidget *flowbox_child = gtk_widget_get_parent(GTK_WIDGET(button));
@@ -358,7 +359,7 @@ static void on_app_card_toggled(GtkToggleButton *button, gpointer user_data) {
         gtk_check_button_set_active(GTK_CHECK_BUTTON(select_all), all_selected);
         g_signal_handlers_unblock_by_func(select_all, G_CALLBACK(on_group_toggle_toggled), flowbox);
     }
-    update_selection_count_labels(NEKO_STORE_WINDOW(user_data));
+    update_selection_count_labels(self);
 }
 
 // Live theme reload; see watch_user_theme() near the bottom of this file.
@@ -488,8 +489,10 @@ static GtkWidget *create_sidebar_button(NekoStoreWindow *self, const char *title
 
 static void on_group_toggle_toggled(GtkCheckButton *btn, gpointer user_data) {
     GtkWidget *flowbox = GTK_WIDGET(user_data);
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(g_object_get_data(G_OBJECT(flowbox), "window"));
     gboolean active = gtk_check_button_get_active(btn);
 
+    if (self) self->bulk_update = TRUE;
     GtkWidget *child = gtk_widget_get_first_child(flowbox);
     while (child != NULL) {
         GtkWidget *card = gtk_flow_box_child_get_child(GTK_FLOW_BOX_CHILD(child));
@@ -497,6 +500,10 @@ static void on_group_toggle_toggled(GtkCheckButton *btn, gpointer user_data) {
             neko_app_card_set_selected(card, active);
         }
         child = gtk_widget_get_next_sibling(child);
+    }
+    if (self) {
+        self->bulk_update = FALSE;
+        update_selection_count_labels(self);
     }
 }
 
@@ -592,10 +599,10 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, 
     gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), GRID_GAP);
 
     g_signal_connect(toggle_all, "toggled", G_CALLBACK(on_group_toggle_toggled), flowbox);
+    g_object_set_data(G_OBJECT(flowbox), "window", self);
 
     *flowbox_out = flowbox;
 
-    // Load apps
     GList *apps = get_all_apps();
     for (GList *l = apps; l != NULL; l = l->next) {
         AppInfo *info = (AppInfo *)l->data;
@@ -612,7 +619,6 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, 
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), flowbox);
     gtk_box_append(GTK_BOX(vbox), scrolled);
 
-    // Footer buttons box
     GtkWidget *footer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
     gtk_widget_add_css_class(footer, "footer");
     gtk_widget_set_margin_top(footer, 8);
@@ -628,7 +634,7 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, 
     GtkWidget *next_btn = gtk_button_new_with_label(next_btn_label);
     bind_ui_text(self, next_btn, next_btn_label, UI_BUTTON);
     gtk_widget_add_css_class(next_btn, "suggested-action");
-    gtk_widget_add_css_class(next_btn, "install-selected-btn"); // using same styling
+    gtk_widget_add_css_class(next_btn, "install-selected-btn");
     gtk_widget_set_halign(next_btn, GTK_ALIGN_END);
     g_object_set_data(G_OBJECT(next_btn), "install-group", GINT_TO_POINTER(group_filter + 1));
     g_signal_connect(next_btn, "clicked", next_cb, self);
@@ -695,7 +701,6 @@ static void install_next_app(NekoStoreWindow *self) {
 
         install_app_async(info->install_command, NULL, install_finished_cb, self);
     } else {
-        // Finished everything
         self->installing = FALSE;
         stop_progress(self);
 
@@ -981,7 +986,6 @@ static void on_language_option_toggled(GtkCheckButton *btn, gpointer user_data) 
 }
 
 static void build_welcome_page(NekoStoreWindow *self) {
-    // Top bar: keep the language picker aligned to the right.
     GtkWidget *top_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
     gtk_widget_set_valign(top_bar, GTK_ALIGN_START);
     gtk_widget_set_hexpand(top_bar, TRUE);
@@ -1002,7 +1006,12 @@ static void build_welcome_page(NekoStoreWindow *self) {
     gtk_check_button_set_group(GTK_CHECK_BUTTON(lang_es), GTK_CHECK_BUTTON(lang_en));
     gtk_check_button_set_group(GTK_CHECK_BUTTON(lang_ja), GTK_CHECK_BUTTON(lang_en));
     gtk_check_button_set_group(GTK_CHECK_BUTTON(lang_it), GTK_CHECK_BUTTON(lang_en));
-    gtk_check_button_set_active(GTK_CHECK_BUTTON(lang_en), TRUE);
+    switch ((Language)self->language) {
+        case LANG_ES: gtk_check_button_set_active(GTK_CHECK_BUTTON(lang_es), TRUE); break;
+        case LANG_JA: gtk_check_button_set_active(GTK_CHECK_BUTTON(lang_ja), TRUE); break;
+        case LANG_IT: gtk_check_button_set_active(GTK_CHECK_BUTTON(lang_it), TRUE); break;
+        default:      gtk_check_button_set_active(GTK_CHECK_BUTTON(lang_en), TRUE); break;
+    }
     g_object_set_data(G_OBJECT(lang_en), "lang", GINT_TO_POINTER(LANG_EN));
     g_object_set_data(G_OBJECT(lang_es), "lang", GINT_TO_POINTER(LANG_ES));
     g_object_set_data(G_OBJECT(lang_ja), "lang", GINT_TO_POINTER(LANG_JA));
@@ -1074,8 +1083,6 @@ static void build_welcome_page(NekoStoreWindow *self) {
     gtk_box_append(GTK_BOX(main_content), self->welcome_body);
     gtk_box_append(GTK_BOX(main_content), self->welcome_start_btn);
 
-    // Assemble the whole structure
-    // We want the top bar at the strict top, and main content centered.
     GtkWidget *welcome_container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_margin_top(top_bar, PAGE_PAD);
     gtk_widget_set_margin_start(top_bar, PAGE_PAD);
@@ -1084,7 +1091,6 @@ static void build_welcome_page(NekoStoreWindow *self) {
     gtk_box_append(GTK_BOX(welcome_container), top_bar);
     gtk_box_append(GTK_BOX(welcome_container), main_content);
 
-    // Re-assign self->welcome_page to the container, since it expects a widget to be added to the stack
     self->welcome_page = welcome_container;
 }
 
@@ -1190,7 +1196,6 @@ static void build_apps_home_page(NekoStoreWindow *self) {
 
     gtk_box_append(GTK_BOX(page), bar_scrolled);
 
-    // Separator between the category bar and the scrolling grid of app cards.
     GtkWidget *cards_separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
     gtk_widget_add_css_class(cards_separator, "apps-separator");
     gtk_box_append(GTK_BOX(page), cards_separator);
@@ -1468,7 +1473,7 @@ static void on_mirror_set_finished_cb(gboolean success, gpointer user_data) {
 }
 
 static void on_mirror_next_clicked(GtkButton *btn, gpointer user_data) {
-    (void)btn; // Required by the clicked signal.
+    (void)btn;
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
 
     if (!self->selected_mirror) {
@@ -1629,6 +1634,7 @@ static void neko_store_window_init (NekoStoreWindow *self) {
     self->stack = gtk_stack_new();
     gtk_stack_set_transition_type(GTK_STACK(self->stack), GTK_STACK_TRANSITION_TYPE_NONE);
     self->ui_text_bindings = g_ptr_array_new_with_free_func(g_free);
+    self->language = detect_language();
 
     build_welcome_page(self);
     build_mirror_page(self);
@@ -1662,6 +1668,8 @@ static void neko_store_window_init (NekoStoreWindow *self) {
     gtk_widget_set_vexpand(self->stack, TRUE);
     gtk_box_append(GTK_BOX(content), self->stack);
     gtk_window_set_child(GTK_WINDOW(self), content);
+
+    update_language(self, (Language)self->language);
 
     // Open the single privileged session as soon as the UI starts, so every
     // later superuser action reuses it and polkit prompts only once.

@@ -1,17 +1,19 @@
 #include <gtk/gtk.h>
+#include <locale.h>
 #include "window.h"
 
 static void
 on_activate (GtkApplication *app,
              gpointer        user_data)
 {
-  (void)user_data; // Required by the GtkApplication activate signal.
+  (void)user_data;
   neko_store_window_new (app);
 }
 
 int
 main (int argc, char **argv)
 {
+  setlocale (LC_ALL, "");
   g_setenv ("GSK_RENDERER", "gl", FALSE);
   // Avoid forwarding this launch to an already-running app instance that uses
   // the generic ID from an older Neko Wizard build.

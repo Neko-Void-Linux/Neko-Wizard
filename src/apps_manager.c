@@ -9,7 +9,6 @@
 #define INSTALL_APP(id) "curl -fsSL -o /tmp/neko-install.sh " NEKO_SCRIPT_URL " && bash /tmp/neko-install.sh " id
 
 static AppInfo apps[] = {
-    // Gaming
     {"Steam", "steam.png", INSTALL_APP("steam"), GROUP_GAMING, FALSE, FALSE},
     {"PortProton", "portproton.png", INSTALL_APP("portproton"), GROUP_GAMING, FALSE, FALSE},
     {"Heroic Games Launcher", "heroic.png", INSTALL_APP("heroic"), GROUP_GAMING, FALSE, FALSE},
@@ -20,7 +19,6 @@ static AppInfo apps[] = {
     {"PineconeMC", "elyprismlauncher.png", INSTALL_APP("pineconemc"), GROUP_GAMING, FALSE, FALSE},
     {"ProtonUp-Qt", "protonup-qt.png", INSTALL_APP("protonup"), GROUP_GAMING, FALSE, FALSE},
     {"Faugus Launcher", "faugus.png", INSTALL_APP("faugus"), GROUP_GAMING, FALSE, FALSE},
-    // Audio and Video editing
     {"Reaper", "reaper.png", INSTALL_APP("reaper"), GROUP_AUDIO_VIDEO, FALSE, FALSE},
     {"OBS Studio", "obs.png", INSTALL_APP("obs"), GROUP_AUDIO_VIDEO, FALSE, FALSE},
     {"Kdenlive", "kdenlive.png", INSTALL_APP("kdenlive"), GROUP_AUDIO_VIDEO, FALSE, FALSE},
@@ -30,12 +28,10 @@ static AppInfo apps[] = {
     {"Ardour", "ardour.png", INSTALL_APP("ardour"), GROUP_AUDIO_VIDEO, FALSE, FALSE},
     {"Blender", "Blender.png", INSTALL_APP("blender"), GROUP_AUDIO_VIDEO, FALSE, FALSE},
 
-    // Drawing and Image Editing
     {"Krita", "krita.png", INSTALL_APP("krita"), GROUP_DRAWING_IMAGE, FALSE, FALSE},
     {"GIMP", "gimp.png", INSTALL_APP("gimp"), GROUP_DRAWING_IMAGE, FALSE, FALSE},
     {"Inkscape", "Inkscape.png", INSTALL_APP("inkscape"), GROUP_DRAWING_IMAGE, FALSE, FALSE},
 
-    // Social Apps
     {"Spotify", "Spotify_icon.svg.png", INSTALL_APP("spotify"), GROUP_SOCIAL, FALSE, FALSE},
     {"Vesktop", "vesktop.png", INSTALL_APP("vesktop"), GROUP_SOCIAL, FALSE, FALSE},
     {"Waterfox", "waterfox.png", INSTALL_APP("waterfox"), GROUP_SOCIAL, FALSE, FALSE},
@@ -45,12 +41,10 @@ static AppInfo apps[] = {
     {"Vivaldi", "vivaldi.png", INSTALL_APP("vivaldi"), GROUP_SOCIAL, FALSE, FALSE},
     {"Chromium", "chromium.png", INSTALL_APP("chromium"), GROUP_SOCIAL, FALSE, FALSE},
 
-    // Text editing and documents
     {"OnlyOffice", "onlyoffice.png", INSTALL_APP("onlyoffice"), GROUP_TEXT_DOCUMENTS, FALSE, FALSE},
     {"Kate", "org.kde.kate.desktop.png", INSTALL_APP("kate"), GROUP_TEXT_DOCUMENTS, FALSE, FALSE},
     {"LibreOffice", "Libre-Office.png", INSTALL_APP("libreoffice"), GROUP_TEXT_DOCUMENTS, FALSE, FALSE},
 
-    // Drivers (grouped - each slot installs all related packages)
     {"Bluetooth","bluetooth.png", INSTALL_APP("bluetooth"), GROUP_DRIVERS, FALSE, FALSE},
     {"Printer Support", "print.png", INSTALL_APP("printer"), GROUP_DRIVERS, FALSE, FALSE},
     {"AMD Drivers", "amd.png", INSTALL_APP("amd"), GROUP_DRIVERS, FALSE, FALSE},
@@ -61,7 +55,6 @@ static AppInfo apps[] = {
     {"NVIDIA Proprietary - 470", "nvidia.png", INSTALL_APP("nvidia-470"), GROUP_DRIVERS, FALSE, FALSE},
     {"NVIDIA Proprietary - 390", "nvidia.png", INSTALL_APP("nvidia-390"), GROUP_DRIVERS, FALSE, FALSE},
 
-    //SECURITY SECTION
     {"GUFW", "firewall.png", INSTALL_APP("gufw"), GROUP_SECURITY, FALSE, FALSE}
 };
 
