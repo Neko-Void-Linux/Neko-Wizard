@@ -56,10 +56,10 @@ static AppInfo apps[] = {
     {"AMD Drivers", "amd.png", INSTALL_APP("amd"), GROUP_DRIVERS, FALSE, FALSE},
     {"Intel Drivers", "intel.png", INSTALL_APP("intel"), GROUP_DRIVERS, FALSE, FALSE},
     {"NVIDIA Open", "nvidia.png", INSTALL_APP("nvidia-open"), GROUP_DRIVERS, FALSE, FALSE},
-    {"NVIDIA Proprietary — Latest", "nvidia.png", INSTALL_APP("nvidia-latest"), GROUP_DRIVERS, FALSE, FALSE},
-    {"NVIDIA Proprietary — 580", "nvidia.png", INSTALL_APP("nvidia-580"), GROUP_DRIVERS, FALSE, FALSE},
-    {"NVIDIA Proprietary — 470", "nvidia.png", INSTALL_APP("nvidia-470"), GROUP_DRIVERS, FALSE, FALSE},
-    {"NVIDIA Proprietary — 390", "nvidia.png", INSTALL_APP("nvidia-390"), GROUP_DRIVERS, FALSE, FALSE},
+    {"NVIDIA Proprietary - Latest", "nvidia.png", INSTALL_APP("nvidia-latest"), GROUP_DRIVERS, FALSE, FALSE},
+    {"NVIDIA Proprietary - 580", "nvidia.png", INSTALL_APP("nvidia-580"), GROUP_DRIVERS, FALSE, FALSE},
+    {"NVIDIA Proprietary - 470", "nvidia.png", INSTALL_APP("nvidia-470"), GROUP_DRIVERS, FALSE, FALSE},
+    {"NVIDIA Proprietary - 390", "nvidia.png", INSTALL_APP("nvidia-390"), GROUP_DRIVERS, FALSE, FALSE},
 
     //SECURITY SECTION
     {"GUFW", "firewall.png", INSTALL_APP("gufw"), GROUP_SECURITY, FALSE, FALSE}

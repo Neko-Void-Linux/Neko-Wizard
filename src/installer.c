@@ -1,5 +1,6 @@
 #include "installer.h"
 #include <gio/gio.h>
+#include <stdio.h>
 
 typedef struct {
     InstallProgressCallback progress_cb;
@@ -36,6 +37,10 @@ static void on_line_read(GObject *source_object, GAsyncResult *res, gpointer use
     char *line = g_data_input_stream_read_line_finish(G_DATA_INPUT_STREAM(source_object), res, &length, &error);
 
     if (line != NULL) {
+        // Mirror every command's output to the terminal as well as the UI.
+        fputs(line, stdout);
+        fputc('\n', stdout);
+        fflush(stdout);
         if (task->progress_cb) {
             task->progress_cb(line, task->user_data);
         }

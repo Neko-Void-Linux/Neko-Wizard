@@ -3,6 +3,7 @@
 #include "app_card.h"
 #include "installer.h"
 #include "mirror_manager.h"
+#include "privileged.h"
 #include <gtk/gtk.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -110,6 +111,7 @@ static const UiTranslation ui_translations[] = {
     {"Running xbps-install -Syu", "Ejecutando xbps-install -Syu", "xbps-install -Syu を実行中", "Esecuzione di xbps-install -Syu"},
     {"Nothing selected", "No hay elementos seleccionados", "項目が選択されていません", "Nessun elemento selezionato"},
     {"Choose at least one item in this category to install.", "Elige al menos un elemento de esta categoría para instalar.", "このカテゴリから少なくとも 1 件選択してください。", "Scegli almeno un elemento di questa categoria da installare."},
+    {"Choose at least one item to install.", "Elige al menos un elemento para instalar.", "インストールする項目を少なくとも 1 件選んでください。", "Scegli almeno un elemento da installare."},
     {"Installing selected items…", "Instalando los elementos seleccionados…", "選択項目をインストール中…", "Installazione degli elementi selezionati…"},
     {"Preparing selected packages…", "Preparando los paquetes seleccionados…", "選択したパッケージを準備中…", "Preparazione dei pacchetti selezionati…"},
     {"✓ Reachable (HTTP %s, %.0fms)", "✓ Disponible (HTTP %s, %.0f ms)", "✓ 接続可能 (HTTP %s, %.0f ms)", "✓ Raggiungibile (HTTP %s, %.0f ms)"},
@@ -216,6 +218,7 @@ struct _NekoStoreWindow {
     GList *apps_to_install;
     GList *current_installing;
     gboolean installing;
+    guint pulse_id;
     int language;
     GtkWidget *lang_btn;
     GPtrArray *selection_count_labels;
@@ -280,6 +283,17 @@ static void term_log(const char *fmt, ...) {
 }
 
 static void update_selection_count_labels(NekoStoreWindow *self) {
+    // The install buttons act on every category, so they are enabled whenever
+    // there is at least one selected item anywhere.
+    int global_selected = 0;
+    GList *all_apps = get_all_apps();
+    for (GList *l = all_apps; l != NULL; l = l->next) {
+        AppInfo *info = l->data;
+        if (info->selected)
+            ++global_selected;
+    }
+    g_list_free(all_apps);
+
     for (guint i = 0; self->selection_count_labels && i < self->selection_count_labels->len; ++i) {
         GtkWidget *label = g_ptr_array_index(self->selection_count_labels, i);
         int group_value = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(label), "count-group"));
@@ -296,8 +310,11 @@ static void update_selection_count_labels(NekoStoreWindow *self) {
         gtk_label_set_text(GTK_LABEL(label), summary);
         g_free(summary);
         GtkWidget *install_button = g_object_get_data(G_OBJECT(label), "install-button");
-        if (install_button)
-            gtk_widget_set_sensitive(install_button, selected_count > 0);
+        if (install_button) {
+            gboolean scoped = (group == GROUP_DRIVERS || group == GROUP_SECURITY);
+            gtk_widget_set_sensitive(install_button,
+                                     scoped ? (selected_count > 0) : (global_selected > 0));
+        }
     }
 
     for (guint i = 0; self->category_count_labels && i < self->category_count_labels->len; ++i) {
@@ -627,6 +644,32 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, 
 
 static void install_next_app(NekoStoreWindow *self);
 
+static gboolean pulse_progress_bar(gpointer user_data) {
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    gtk_progress_bar_pulse(GTK_PROGRESS_BAR(self->progress_bar));
+    return G_SOURCE_CONTINUE;
+}
+
+// Shows the continuous loading bar and locks navigation while a run is active.
+static void start_progress(NekoStoreWindow *self) {
+    gtk_widget_set_visible(self->progress_bar, TRUE);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(self->progress_bar), 0.0);
+    if (self->pulse_id == 0)
+        self->pulse_id = g_timeout_add(100, pulse_progress_bar, self);
+    if (self->sidebar)
+        gtk_widget_set_sensitive(self->sidebar, FALSE);
+}
+
+static void stop_progress(NekoStoreWindow *self) {
+    if (self->pulse_id != 0) {
+        g_source_remove(self->pulse_id);
+        self->pulse_id = 0;
+    }
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(self->progress_bar), 1.0);
+    if (self->sidebar)
+        gtk_widget_set_sensitive(self->sidebar, TRUE);
+}
+
 static void install_finished_cb(gboolean success, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
 
@@ -639,35 +682,22 @@ static void install_finished_cb(gboolean success, gpointer user_data) {
     install_next_app(self);
 }
 
-static void install_progress_cb(const char *status_message, gpointer user_data) {
-    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
-    if (status_message && g_utf8_validate(status_message, -1, NULL)) {
-        g_print("%s\n", status_message);
-        fflush(stdout);
-        char *trunc = g_strndup(status_message, 60);
-        gtk_label_set_text(GTK_LABEL(self->status_label), trunc);
-        g_free(trunc);
-    }
-}
-
 static void install_next_app(NekoStoreWindow *self) {
     if (self->current_installing != NULL) {
         AppInfo *info = (AppInfo *)self->current_installing->data;
         int total = g_list_length(self->apps_to_install);
         int index = g_list_position(self->apps_to_install, self->current_installing);
         if (index < 0) index = 0;
-        gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(self->progress_bar),
-                                      total > 0 ? (double)index / total : 0.0);
         char *status = g_strdup_printf(ui_tr((Language)self->language, "Installing %s (%d of %d)…"), info->name, index + 1, total);
         gtk_label_set_text(GTK_LABEL(self->status_label), status);
         g_free(status);
         term_log("Installing %s...", info->name);
 
-        install_app_async(info->install_command, install_progress_cb, install_finished_cb, self);
+        install_app_async(info->install_command, NULL, install_finished_cb, self);
     } else {
         // Finished everything
         self->installing = FALSE;
-        gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(self->progress_bar), 1.0);
+        stop_progress(self);
 
         GList *failed = NULL;
         for (GList *l = self->apps_to_install; l != NULL; l = l->next) {
@@ -710,6 +740,7 @@ static void install_next_app(NekoStoreWindow *self) {
 static void system_update_finished_cb(gboolean success, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
     self->installing = FALSE;
+    stop_progress(self);
     gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, success ? "System update complete" : "System update failed"));
     gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, success ? "The update command finished successfully." : "Check the output above for details, then try again."));
     gtk_widget_set_visible(self->finished_back_btn, TRUE);
@@ -729,8 +760,8 @@ static void on_update_system_clicked(GtkButton *btn, gpointer user_data) {
     gtk_stack_set_visible_child(GTK_STACK(self->stack), self->finished_page);
     gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, "Updating system…"));
     gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, "Running xbps-install -Syu"));
-    gtk_widget_set_visible(self->progress_bar, FALSE);
-    install_app_async("pkexec xbps-install -y -Syu", install_progress_cb, system_update_finished_cb, self);
+    start_progress(self);
+    install_app_async("pkexec xbps-install -y -Syu", NULL, system_update_finished_cb, self);
 }
 
 static void on_install_selected_clicked(GtkButton *btn, gpointer user_data) {
@@ -747,16 +778,19 @@ static void on_install_selected_clicked(GtkButton *btn, gpointer user_data) {
     self->finished_return_page_name = g_strdup(current_page ? current_page : "first_steps");
     self->installing = TRUE;
 
-    // Install only selections in the current tool/category.
+    // The generic "Install selected" covers every category; the specialised
+    // Driver and Firewall buttons stay scoped to their own group.
     int group_value = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(btn), "install-group"));
     AppGroup selected_group = (AppGroup)(group_value - 1);
+    gboolean scoped = (selected_group == GROUP_DRIVERS || selected_group == GROUP_SECURITY);
+
     g_list_free(self->apps_to_install);
     self->apps_to_install = NULL;
 
     GList *apps = get_all_apps();
     for (GList *l = apps; l != NULL; l = l->next) {
         AppInfo *info = (AppInfo *)l->data;
-        if (info->selected && info->group == selected_group) {
+        if (info->selected && (!scoped || info->group == selected_group)) {
             self->apps_to_install = g_list_append(self->apps_to_install, info);
         }
     }
@@ -769,14 +803,13 @@ static void on_install_selected_clicked(GtkButton *btn, gpointer user_data) {
         self->installing = FALSE;
         gtk_widget_set_visible(self->progress_bar, FALSE);
         gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, "Nothing selected"));
-        gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, "Choose at least one item in this category to install."));
+        gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, "Choose at least one item to install."));
         gtk_widget_set_visible(self->finished_back_btn, TRUE);
         gtk_stack_set_visible_child(GTK_STACK(self->stack), self->finished_page);
         return;
     }
     gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, "Installing selected items…"));
-    gtk_widget_set_visible(self->progress_bar, TRUE);
-    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(self->progress_bar), 0.0);
+    start_progress(self);
 
     self->current_installing = self->apps_to_install;
     gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, "Preparing selected packages…"));
@@ -1629,10 +1662,20 @@ static void neko_store_window_init (NekoStoreWindow *self) {
     gtk_widget_set_vexpand(self->stack, TRUE);
     gtk_box_append(GTK_BOX(content), self->stack);
     gtk_window_set_child(GTK_WINDOW(self), content);
+
+    // Open the single privileged session as soon as the UI starts, so every
+    // later superuser action reuses it and polkit prompts only once.
+    privileged_start_async();
 }
 
 static void neko_store_window_dispose(GObject *object) {
     NekoStoreWindow *self = (NekoStoreWindow *)object;
+    // Stop the privileged session so no root process outlives the window.
+    privileged_shutdown();
+    if (self->pulse_id != 0) {
+        g_source_remove(self->pulse_id);
+        self->pulse_id = 0;
+    }
     if (self->apps_to_install) {
         g_list_free(self->apps_to_install);
         self->apps_to_install = NULL;

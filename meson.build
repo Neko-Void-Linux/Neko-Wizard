@@ -11,6 +11,7 @@ src = [
   'src/window.c',
   'src/app_card.c',
   'src/mirror_manager.c',
+  'src/privileged.c',
 ]
 
 executable('neko-store',
