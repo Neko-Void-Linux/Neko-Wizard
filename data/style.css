@@ -273,14 +273,14 @@ button.tool-launcher:focus-visible image.tool-icon {
     padding-bottom: 2px;
 }
 
-.category-rail {
-    padding-top: 4px;
+.category-bar {
+    padding: 2px 0;
 }
 
 button.category-button {
-    min-height: 60px;
-    padding: 6px 8px;
-    margin: 2px 0;
+    min-height: 54px;
+    padding: 6px 10px;
+    margin: 0 2px;
     border: none;
     border-radius: 0;
     background-color: transparent;
@@ -321,6 +321,11 @@ image.category-icon {
 button.category-button:checked image.category-icon,
 button.category-button:focus-visible image.category-icon {
     color: @accent;
+}
+
+separator.apps-separator {
+    min-height: 1px;
+    background-color: @border;
 }
 
 button.update-system-btn {
@@ -599,10 +604,6 @@ popover checkbutton {
     padding-top: 8px;
 }
 
-.package-search {
-    min-height: 40px;
-}
-
 .selection-count,
 .numeric {
     font-family: 'Noto Sans', sans-serif;
@@ -641,10 +642,10 @@ flowboxchild:focus-visible {
 }
 
 button.app-card {
-    min-height: 60px;
+    min-height: 132px;
     background-color: @surface;
     border: none;
-    padding: 6px 10px;
+    padding: 12px 10px;
     border-radius: 0;
     transition: background-color 120ms ease, color 120ms ease;
 }

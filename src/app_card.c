@@ -20,37 +20,39 @@ gboolean neko_app_card_get_selected(GtkWidget *card) {
 
 GtkWidget *neko_app_card_new(AppInfo *info) {
     GtkWidget *card = gtk_toggle_button_new();
-    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
     GtkWidget *overlay = gtk_overlay_new();
     GtkWidget *icon_image = gtk_image_new();
     GtkWidget *name_label = gtk_label_new(info->name);
     GtkWidget *selection_indicator = gtk_label_new("✓");
 
     gtk_widget_add_css_class(card, "app-card");
-    gtk_widget_set_size_request(card, 204, 72);
+    gtk_widget_set_size_request(card, 172, 148);
     gtk_widget_set_hexpand(box, TRUE);
     gtk_widget_set_valign(box, GTK_ALIGN_CENTER);
+    gtk_widget_set_halign(box, GTK_ALIGN_CENTER);
 
-    gtk_image_set_pixel_size(GTK_IMAGE(icon_image), 40);
-    gtk_widget_set_size_request(icon_image, 40, 40);
-    gtk_widget_set_halign(icon_image, GTK_ALIGN_START);
+    gtk_image_set_pixel_size(GTK_IMAGE(icon_image), 48);
+    gtk_widget_set_size_request(icon_image, 48, 48);
+    gtk_widget_set_halign(icon_image, GTK_ALIGN_CENTER);
     gtk_widget_add_css_class(icon_image, "card-icon");
 
     gtk_widget_add_css_class(name_label, "card-title");
     gtk_label_set_wrap(GTK_LABEL(name_label), TRUE);
     gtk_label_set_wrap_mode(GTK_LABEL(name_label), PANGO_WRAP_WORD_CHAR);
-    gtk_label_set_max_width_chars(GTK_LABEL(name_label), 28);
-    gtk_label_set_xalign(GTK_LABEL(name_label), 0.0);
-    gtk_widget_set_halign(name_label, GTK_ALIGN_FILL);
-    gtk_widget_set_hexpand(name_label, TRUE);
+    gtk_label_set_max_width_chars(GTK_LABEL(name_label), 20);
+    gtk_label_set_justify(GTK_LABEL(name_label), GTK_JUSTIFY_CENTER);
+    gtk_label_set_xalign(GTK_LABEL(name_label), 0.5);
+    gtk_widget_set_halign(name_label, GTK_ALIGN_CENTER);
 
     gtk_box_append(GTK_BOX(box), icon_image);
     gtk_box_append(GTK_BOX(box), name_label);
     gtk_overlay_set_child(GTK_OVERLAY(overlay), box);
     gtk_widget_add_css_class(selection_indicator, "card-check");
     gtk_widget_set_halign(selection_indicator, GTK_ALIGN_END);
-    gtk_widget_set_valign(selection_indicator, GTK_ALIGN_CENTER);
-    gtk_widget_set_margin_end(selection_indicator, 8);
+    gtk_widget_set_valign(selection_indicator, GTK_ALIGN_START);
+    gtk_widget_set_margin_top(selection_indicator, 6);
+    gtk_widget_set_margin_end(selection_indicator, 6);
     gtk_widget_set_visible(selection_indicator, info->selected);
     gtk_overlay_add_overlay(GTK_OVERLAY(overlay), selection_indicator);
     gtk_button_set_child(GTK_BUTTON(card), overlay);

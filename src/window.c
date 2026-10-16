@@ -64,6 +64,8 @@ static const UiTranslation ui_translations[] = {
     {"The firewall option installs GUFW and enables UFW.", "La opción de cortafuegos instala GUFW y activa UFW.", "ファイアウォールの項目は GUFW をインストールし、UFW を有効にします。", "L'opzione firewall installa GUFW e abilita UFW."},
     {"Choose the items you want, then install them when you are ready.", "Elige los elementos que deseas e instálalos cuando estés listo.", "必要な項目を選び、準備ができたらインストールします。", "Scegli gli elementi desiderati e installali quando sei pronto."},
     {"Select all, including hidden results", "Seleccionar todo, incluso lo oculto", "非表示の結果もすべて選択", "Seleziona tutto, anche i risultati nascosti"},
+    {"Select all", "Seleccionar todo", "すべて選択", "Seleziona tutto"},
+    {"Select every app in this category.", "Selecciona todas las aplicaciones de esta categoría.", "このカテゴリのすべてのアプリを選択します。", "Seleziona tutte le applicazioni di questa categoria."},
     {"Search apps…", "Buscar aplicaciones…", "アプリを検索…", "Cerca applicazioni…"},
     {"Search apps", "Buscar aplicaciones", "アプリを検索", "Cerca applicazioni"},
     {"Search drivers…", "Buscar controladores…", "ドライバーを検索…", "Cerca driver…"},
@@ -481,34 +483,6 @@ static void on_group_toggle_toggled(GtkCheckButton *btn, gpointer user_data) {
     }
 }
 
-static gboolean app_card_matches_search(GtkFlowBoxChild *child, gpointer user_data) {
-    GtkWidget *card = gtk_flow_box_child_get_child(child);
-    AppInfo *info = g_object_get_data(G_OBJECT(card), "app-info");
-    const char *query = gtk_editable_get_text(GTK_EDITABLE(user_data));
-    if (!info || !query || query[0] == '\0')
-        return TRUE;
-
-    g_autofree char *folded_query = g_utf8_casefold(query, -1);
-    g_autofree char *folded_name = g_utf8_casefold(info->name, -1);
-    return g_strstr_len(folded_name, -1, folded_query) != NULL;
-}
-
-static void on_app_search_changed(GtkSearchEntry *entry, gpointer user_data) {
-    GtkFlowBox *flowbox = GTK_FLOW_BOX(user_data);
-    gtk_flow_box_invalidate_filter(flowbox);
-
-    guint matches = 0;
-    for (GtkWidget *child = gtk_widget_get_first_child(GTK_WIDGET(flowbox));
-         child != NULL; child = gtk_widget_get_next_sibling(child)) {
-        if (app_card_matches_search(GTK_FLOW_BOX_CHILD(child), entry))
-            ++matches;
-    }
-
-    GtkWidget *empty_state = g_object_get_data(G_OBJECT(flowbox), "empty-state");
-    if (empty_state)
-        gtk_widget_set_visible(empty_state, matches == 0);
-}
-
 static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, const char *title, AppGroup group_filter, GtkWidget **flowbox_out, GCallback next_cb, const char *next_btn_label, gboolean embedded) {
     (void)step_number;
     const int inner_pad = embedded ? 12 : PAGE_PAD;
@@ -521,14 +495,17 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, 
     gtk_widget_set_margin_end(header_box, inner_pad);
     gtk_widget_set_hexpand(header_box, TRUE);
 
-    GtkWidget *header = gtk_label_new(title);
-    gtk_widget_add_css_class(header, embedded ? "category-page-title" : "page-header");
-    bind_ui_text(self, header, title, UI_LABEL);
-    gtk_widget_set_halign(header, GTK_ALIGN_FILL);
-    gtk_widget_set_hexpand(header, TRUE);
-    gtk_label_set_xalign(GTK_LABEL(header), 0.0);
-    gtk_label_set_wrap(GTK_LABEL(header), TRUE);
-    gtk_box_append(GTK_BOX(header_box), header);
+    GtkWidget *header = NULL;
+    if (!embedded) {
+        header = gtk_label_new(title);
+        gtk_widget_add_css_class(header, "page-header");
+        bind_ui_text(self, header, title, UI_LABEL);
+        gtk_widget_set_halign(header, GTK_ALIGN_FILL);
+        gtk_widget_set_hexpand(header, TRUE);
+        gtk_label_set_xalign(GTK_LABEL(header), 0.0);
+        gtk_label_set_wrap(GTK_LABEL(header), TRUE);
+        gtk_box_append(GTK_BOX(header_box), header);
+    }
 
     if (!embedded || group_filter == GROUP_SECURITY) {
         const char *help = group_filter == GROUP_DRIVERS
@@ -555,32 +532,13 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, 
     gtk_widget_set_margin_start(toolbar, inner_pad);
     gtk_widget_set_margin_end(toolbar, inner_pad);
 
-    GtkWidget *toggle_all = gtk_check_button_new_with_label("Select all, including hidden results");
-    bind_ui_text(self, toggle_all, "Select all, including hidden results", UI_CHECK);
+    GtkWidget *toggle_all = gtk_check_button_new_with_label("Select all");
+    bind_ui_text(self, toggle_all, "Select all", UI_CHECK);
     gtk_widget_set_tooltip_text(toggle_all,
-        "Select every app in this category, including results hidden by search.");
+        "Select every app in this category.");
     bind_ui_text(self, toggle_all,
-                 "Select every app in this category, including results hidden by search.", UI_TOOLTIP);
+                 "Select every app in this category.", UI_TOOLTIP);
     gtk_widget_set_visible(toggle_all, group_filter != GROUP_DRIVERS && group_filter != GROUP_SECURITY);
-    GtkWidget *search_entry = gtk_search_entry_new();
-    const char *search_placeholder = group_filter == GROUP_DRIVERS ? "Search drivers…"
-                                   : group_filter == GROUP_SECURITY ? "Search tools…" : "Search apps…";
-    const char *search_name = group_filter == GROUP_DRIVERS ? "Search drivers"
-                              : group_filter == GROUP_SECURITY ? "Search tools" : "Search apps";
-    gtk_search_entry_set_placeholder_text(GTK_SEARCH_ENTRY(search_entry), search_placeholder);
-    bind_ui_text(self, search_entry, search_placeholder, UI_PLACEHOLDER);
-    gtk_widget_add_css_class(search_entry, "package-search");
-    gtk_widget_set_size_request(search_entry, 140, -1);
-    gtk_widget_set_hexpand(search_entry, TRUE);
-    gtk_widget_set_tooltip_text(search_entry,
-        "Filters visible items. Existing selections are kept.");
-    bind_ui_text(self, search_entry,
-                 "Filters visible items. Existing selections are kept.", UI_TOOLTIP);
-    gtk_accessible_update_property(GTK_ACCESSIBLE(search_entry),
-                                   GTK_ACCESSIBLE_PROPERTY_LABEL, search_name,
-                                   -1);
-    bind_ui_text(self, search_entry, search_name, UI_ACCESSIBLE);
-    gtk_box_append(GTK_BOX(toolbar), search_entry);
 
     GtkWidget *selection_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     gtk_box_append(GTK_BOX(selection_row), toggle_all);
@@ -609,27 +567,12 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, 
     gtk_widget_set_halign(flowbox, GTK_ALIGN_FILL);
     gtk_widget_set_margin_top(flowbox, 16);
     gtk_widget_set_margin_bottom(flowbox, inner_pad);
-    gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(flowbox), 1);
-    gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flowbox), 1);
+    gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(flowbox), 2);
+    gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flowbox), 8);
     gtk_flow_box_set_homogeneous(GTK_FLOW_BOX(flowbox), TRUE);
     gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(flowbox), GTK_SELECTION_NONE);
     gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), GRID_GAP);
     gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), GRID_GAP);
-    gtk_flow_box_set_filter_func(GTK_FLOW_BOX(flowbox), app_card_matches_search,
-                                 search_entry, NULL);
-    g_signal_connect(search_entry, "search-changed",
-                     G_CALLBACK(on_app_search_changed), flowbox);
-
-    const char *empty_text = group_filter == GROUP_DRIVERS ? "No drivers match this search."
-                            : group_filter == GROUP_SECURITY ? "No tools match this search."
-                            : "No apps match this search.";
-    GtkWidget *empty_label = gtk_label_new(empty_text);
-    bind_ui_text(self, empty_label, empty_text, UI_LABEL);
-    gtk_widget_add_css_class(empty_label, "empty-state");
-    gtk_widget_set_halign(empty_label, GTK_ALIGN_CENTER);
-    gtk_widget_set_valign(empty_label, GTK_ALIGN_CENTER);
-    gtk_widget_set_visible(empty_label, FALSE);
-    g_object_set_data(G_OBJECT(flowbox), "empty-state", empty_label);
 
     g_signal_connect(toggle_all, "toggled", G_CALLBACK(on_group_toggle_toggled), flowbox);
 
@@ -649,10 +592,7 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, 
     g_list_free(apps);
     update_selection_count_labels(self);
 
-    GtkWidget *flow_overlay = gtk_overlay_new();
-    gtk_overlay_set_child(GTK_OVERLAY(flow_overlay), flowbox);
-    gtk_overlay_add_overlay(GTK_OVERLAY(flow_overlay), empty_label);
-    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), flow_overlay);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), flowbox);
     gtk_box_append(GTK_BOX(vbox), scrolled);
 
     // Footer buttons box
@@ -1184,24 +1124,14 @@ static void build_apps_home_page(NekoStoreWindow *self) {
     gtk_box_append(GTK_BOX(page), title);
     gtk_box_append(GTK_BOX(page), description);
 
-    GtkWidget *workspace = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
-    gtk_widget_set_hexpand(workspace, TRUE);
-    gtk_widget_set_vexpand(workspace, TRUE);
-
-    GtkWidget *category_rail = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-    gtk_widget_add_css_class(category_rail, "category-rail");
-    GtkWidget *rail_scrolled = gtk_scrolled_window_new();
-    gtk_widget_set_size_request(rail_scrolled, 168, -1);
-    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(rail_scrolled),
-                                   GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(rail_scrolled), category_rail);
-    GtkWidget *section_title = gtk_label_new("CATEGORIES");
-    gtk_widget_add_css_class(section_title, "sidebar-section-title");
-    bind_ui_text(self, section_title, "CATEGORIES", UI_LABEL);
-    gtk_widget_set_halign(section_title, GTK_ALIGN_START);
-    gtk_widget_set_margin_start(section_title, 10);
-    gtk_widget_set_margin_bottom(section_title, 6);
-    gtk_box_append(GTK_BOX(category_rail), section_title);
+    GtkWidget *category_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    gtk_widget_add_css_class(category_bar, "category-bar");
+    GtkWidget *bar_scrolled = gtk_scrolled_window_new();
+    gtk_widget_set_margin_top(bar_scrolled, 4);
+    gtk_widget_set_margin_bottom(bar_scrolled, 10);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(bar_scrolled),
+                                   GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(bar_scrolled), category_bar);
 
     self->category_stack = gtk_stack_new();
     gtk_stack_set_transition_type(GTK_STACK(self->category_stack), GTK_STACK_TRANSITION_TYPE_NONE);
@@ -1215,19 +1145,24 @@ static void build_apps_home_page(NekoStoreWindow *self) {
     gtk_stack_add_named(GTK_STACK(self->category_stack), self->security_page, "security");
 
     GtkWidget *first = create_category_button(self, TOOL_ICON_GAMEPAD, "Games", "gaming", GROUP_GAMING, NULL);
-    gtk_box_append(GTK_BOX(category_rail), first);
-    gtk_box_append(GTK_BOX(category_rail), create_category_button(self, TOOL_ICON_MEDIA, "Media", "audio_video", GROUP_AUDIO_VIDEO, first));
-    gtk_box_append(GTK_BOX(category_rail), create_category_button(self, TOOL_ICON_PALETTE, "Graphics", "drawing", GROUP_DRAWING_IMAGE, first));
-    gtk_box_append(GTK_BOX(category_rail), create_category_button(self, TOOL_ICON_GLOBE, "Internet", "social", GROUP_SOCIAL, first));
-    gtk_box_append(GTK_BOX(category_rail), create_category_button(self, TOOL_ICON_DOCUMENT, "Documents", "text_documents", GROUP_TEXT_DOCUMENTS, first));
+    gtk_box_append(GTK_BOX(category_bar), first);
+    gtk_box_append(GTK_BOX(category_bar), create_category_button(self, TOOL_ICON_MEDIA, "Media", "audio_video", GROUP_AUDIO_VIDEO, first));
+    gtk_box_append(GTK_BOX(category_bar), create_category_button(self, TOOL_ICON_PALETTE, "Graphics", "drawing", GROUP_DRAWING_IMAGE, first));
+    gtk_box_append(GTK_BOX(category_bar), create_category_button(self, TOOL_ICON_GLOBE, "Internet", "social", GROUP_SOCIAL, first));
+    gtk_box_append(GTK_BOX(category_bar), create_category_button(self, TOOL_ICON_DOCUMENT, "Documents", "text_documents", GROUP_TEXT_DOCUMENTS, first));
     self->firewall_category_button = create_category_button(self, TOOL_ICON_SHIELD, "Firewall", "security", GROUP_SECURITY, first);
-    gtk_box_append(GTK_BOX(category_rail), self->firewall_category_button);
+    gtk_box_append(GTK_BOX(category_bar), self->firewall_category_button);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(first), TRUE);
     gtk_stack_set_visible_child_name(GTK_STACK(self->category_stack), "gaming");
 
-    gtk_box_append(GTK_BOX(workspace), rail_scrolled);
-    gtk_box_append(GTK_BOX(workspace), self->category_stack);
-    gtk_box_append(GTK_BOX(page), workspace);
+    gtk_box_append(GTK_BOX(page), bar_scrolled);
+
+    // Separator between the category bar and the scrolling grid of app cards.
+    GtkWidget *cards_separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_widget_add_css_class(cards_separator, "apps-separator");
+    gtk_box_append(GTK_BOX(page), cards_separator);
+
+    gtk_box_append(GTK_BOX(page), self->category_stack);
     self->apps_home_page = page;
     update_selection_count_labels(self);
 }
