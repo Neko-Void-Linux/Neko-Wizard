@@ -97,27 +97,8 @@ install_prismlauncher() {
 }
 
 install_pineconemc() {
-    # PineconeMC ships as an AppImage; AppImageLauncher Lite integrates it into
-    # the desktop menu. Both are user-level (no pkexec needed).
-    local dir="$HOME/apps"
-    local launcher="$dir/appimagelauncher-lite.AppImage"
-    local pinecone="$dir/PineconeMC-Linux-x86_64.AppImage"
-
-    log "Downloading AppImageLauncher..."
-    mkdir -p "$dir" || die "Could not create $dir"
-    curl -fsSL -o "$launcher" \
-        "https://github.com/TheAssassin/AppImageLauncher/releases/download/v2.2.0/appimagelauncher-lite-2.2.0-travis995-0f91801-x86_64.AppImage" \
-        || die "Failed to download AppImageLauncher"
-    chmod +x "$launcher"
-
-    log "Downloading PineconeMC..."
-    curl -fsSL -o "$pinecone" \
-        "https://github.com/ElyPrismLauncher/Launcher/releases/download/11.0.3/PineconeMC-Linux-x86_64.AppImage" \
-        || die "Failed to download PineconeMC"
-    chmod +x "$pinecone"
-
-    log "Integrating PineconeMC into the desktop (AppImageLauncher)..."
-    "$launcher" cli integrate "$pinecone"
+    log "Install PineconeMC"
+    pkexec xbps-install -Sy PineconeMC
 }
 
 install_protonup() {
