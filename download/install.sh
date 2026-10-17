@@ -84,11 +84,7 @@ install_hytale() {
 
 install_trinity() {
     log "Installing Trinity Launcher (Flatpak)..."
-    flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-    flatpak remote-add --if-not-exists --user trinity \
-    https://huggingface.co/datasets/ccoffee20/flatpak/resolve/main/com.trench.trinity.launcher.flatpakrepo
-    flatpak install --user flathub org.kde.Platform//6.10 io.qt.qtwebengine.BaseApp//6.10 -y
-    flatpak install --user trinity com.trench.trinity.launcher -y
+    pkexec xbps-install -Sy trinity-launcher-app
 }
 
 install_prismlauncher() {
