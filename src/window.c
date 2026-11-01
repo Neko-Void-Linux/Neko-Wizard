@@ -186,6 +186,7 @@ struct _NekoStoreWindow {
     GtkWidget *welcome_body;
     GtkWidget *welcome_start_btn;
     GtkWidget *about_btn;
+    GtkWidget *help_btn;
 
     GtkWidget *gaming_page;
     GtkWidget *gaming_flowbox;
@@ -824,6 +825,13 @@ static void on_install_selected_clicked(GtkButton *btn, gpointer user_data) {
     install_next_app(self);
 }
 
+static void on_help_clicked(GtkButton *btn, gpointer user_data) {
+    (void)btn;
+    gtk_show_uri(GTK_WINDOW(user_data),
+                 "https://fr.neko-void-linux.online/f/5f4ac98e-852d-45c1-ad52-09e3ac7d9824",
+                 GDK_CURRENT_TIME);
+}
+
 static void on_about_clicked(GtkButton *btn, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
     (void)btn;
@@ -922,6 +930,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
     const char *body;
     const char *start_label;
     const char *about;
+    const char *help;
     const char *lang_name;
     switch (lang) {
         case LANG_ES:
@@ -930,6 +939,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
             body = "Use Primeros pasos para las tareas recomendadas, o elija una herramienta desde la barra lateral.";
             start_label = "Abrir Primeros pasos";
             about = "Acerca de";
+            help = "Ayuda";
             lang_name = "Español";
             break;
         case LANG_JA:
@@ -938,6 +948,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
             body = "おすすめの初期設定は「はじめに」から、またはサイドバーからツールを選べます。";
             start_label = "はじめにを開く";
             about = "このアプリについて";
+            help = "ヘルプ";
             lang_name = "日本語";
             break;
         case LANG_IT:
@@ -946,6 +957,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
             body = "Usa Primi passi per le attività consigliate o scegli uno strumento dalla barra laterale.";
             start_label = "Apri Primi passi";
             about = "Informazioni";
+            help = "Aiuto";
             lang_name = "Italiano";
             break;
         default:
@@ -954,6 +966,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
             body = "Use First Steps for recommended setup tasks, or choose a tool from the sidebar whenever you need it.";
             start_label = "Open First Steps";
             about = "About";
+            help = "Help";
             lang_name = "English";
             break;
     }
@@ -963,6 +976,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
     if (self->welcome_body) gtk_label_set_text(GTK_LABEL(self->welcome_body), body);
     if (self->welcome_start_btn) gtk_button_set_label(GTK_BUTTON(self->welcome_start_btn), start_label);
     if (self->about_btn) gtk_button_set_label(GTK_BUTTON(self->about_btn), about);
+    if (self->help_btn) gtk_button_set_label(GTK_BUTTON(self->help_btn), help);
     if (self->lang_btn) gtk_menu_button_set_label(GTK_MENU_BUTTON(self->lang_btn), lang_name);
     for (guint i = 0; self->ui_text_bindings && i < self->ui_text_bindings->len; ++i)
         apply_ui_binding(g_ptr_array_index(self->ui_text_bindings, i), lang);
@@ -1335,6 +1349,11 @@ static GtkWidget *build_sidebar(NekoStoreWindow *self) {
     GtkWidget *spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_vexpand(spacer, TRUE);
     gtk_box_append(GTK_BOX(sidebar), spacer);
+
+    self->help_btn = gtk_button_new_with_label("Help");
+    gtk_widget_add_css_class(self->help_btn, "about-btn");
+    g_signal_connect(self->help_btn, "clicked", G_CALLBACK(on_help_clicked), self);
+    gtk_box_append(GTK_BOX(sidebar), self->help_btn);
 
     self->about_btn = gtk_button_new_with_label("About");
     gtk_widget_add_css_class(self->about_btn, "about-btn");
