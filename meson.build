@@ -16,6 +16,7 @@ src = [
 
 executable('neko-store',
   src,
+  c_args : ['-DNEKO_VERSION="@0@"'.format(meson.project_version())],
   dependencies : [gtkdep],
   install : true
 )

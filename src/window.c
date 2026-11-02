@@ -7,8 +7,14 @@
 #include <gtk/gtk.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
+
+#ifndef NEKO_VERSION
+#define NEKO_VERSION "0.1.0"
+#endif
 
 // Layout scale. Every margin in this file is one of these or a multiple of 4,
 // so the pages stay on a single rhythm. See data/style.css for the rest.
@@ -122,6 +128,24 @@ static const UiTranslation ui_translations[] = {
     {"Could not apply the mirror. Check permissions and try again.", "No se pudo aplicar la réplica. Comprueba los permisos e inténtalo de nuevo.", "ミラーを適用できませんでした。権限を確認して再試行してください。", "Impossibile applicare il mirror. Controlla i permessi e riprova."},
     {"Please select a mirror first.", "Primero elige una réplica.", "先にミラーを選択してください。", "Seleziona prima un mirror."},
     {"Setting system mirror...", "Aplicando la réplica del sistema…", "システムミラーを設定中…", "Impostazione del mirror di sistema…"},
+    {"SYSTEM OVERVIEW", "RESUMEN DEL SISTEMA", "システム概要", "PANORAMICA SISTEMA"},
+    {"QUICK ACTIONS", "ACCIONES RÁPIDAS", "クイック操作", "AZIONI RAPIDE"},
+    {"System details at a glance.", "Detalles del sistema de un vistazo.", "システムの詳細をひと目で確認できます。", "Dettagli del sistema a colpo d'occhio."},
+    {"Jump straight to the tool you need.", "Accede directamente a la herramienta que necesitas.", "必要なツールにすぐアクセスできます。", "Accedi direttamente allo strumento che ti serve."},
+    {"Distribution", "Distribución", "ディストリビューション", "Distribuzione"},
+    {"Architecture", "Arquitectura", "アーキテクチャ", "Architettura"},
+    {"Installed packages", "Paquetes instalados", "インストール済みパッケージ", "Pacchetti installati"},
+    {"Updates", "Actualizaciones", "更新", "Aggiornamenti"},
+    {"Local packages managed by xbps.", "Paquetes locales gestionados por xbps.", "xbps で管理されているローカルパッケージ。", "Pacchetti locali gestiti da xbps."},
+    {"Repository update status.", "Estado de actualizaciones del repositorio.", "リポジトリの更新状況。", "Stato degli aggiornamenti del repository."},
+    {"Checking…", "Comprobando…", "確認中…", "Verifica…"},
+    {"Unavailable", "No disponible", "利用不可", "Non disponibile"},
+    {"Up to date", "Actualizado", "最新の状態", "Aggiornato"},
+    {"updates available", "actualizaciones disponibles", "件の更新があります", "aggiornamenti disponibili"},
+    {"Rolling release", "Lanzamiento continuo", "ローリングリリース", "Rilascio continuo"},
+    {"via xbps", "mediante xbps", "xbps 経由", "tramite xbps"},
+    {"via xbps-install", "mediante xbps-install", "xbps-install 経由", "tramite xbps-install"},
+    {"Kernel %s", "Núcleo %s", "カーネル %s", "Kernel %s"},
 };
 
 static const char *ui_tr(Language lang, const char *english) {
@@ -187,6 +211,10 @@ struct _NekoStoreWindow {
     GtkWidget *welcome_start_btn;
     GtkWidget *about_btn;
     GtkWidget *help_btn;
+    GtkWidget *package_count_label;
+    GtkWidget *package_detail_label;
+    GtkWidget *update_count_label;
+    GtkWidget *update_detail_label;
 
     GtkWidget *gaming_page;
     GtkWidget *gaming_flowbox;
@@ -468,14 +496,23 @@ static GtkWidget *create_tool_button(ToolIcon icon_type, const char *title,
     return button;
 }
 
-static GtkWidget *create_sidebar_button(NekoStoreWindow *self, const char *title, const char *page_name) {
+static GtkWidget *create_sidebar_button(NekoStoreWindow *self, const char *icon_name,
+                                        const char *title, const char *page_name) {
     GtkWidget *button = gtk_toggle_button_new();
+    GtkWidget *content = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    GtkWidget *icon = gtk_image_new_from_icon_name(icon_name);
+    gtk_image_set_pixel_size(GTK_IMAGE(icon), 18);
+    gtk_widget_set_valign(icon, GTK_ALIGN_CENTER);
+    gtk_widget_add_css_class(icon, "sidebar-icon");
+    gtk_widget_set_can_target(icon, FALSE);
     GtkWidget *label = gtk_label_new(title);
     gtk_label_set_xalign(GTK_LABEL(label), 0.0);
     gtk_label_set_single_line_mode(GTK_LABEL(label), TRUE);
     gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
     gtk_widget_set_hexpand(label, TRUE);
-    gtk_button_set_child(GTK_BUTTON(button), label);
+    gtk_box_append(GTK_BOX(content), icon);
+    gtk_box_append(GTK_BOX(content), label);
+    gtk_button_set_child(GTK_BUTTON(button), content);
     gtk_widget_add_css_class(button, "sidebar-button");
     bind_ui_text(self, label, title, UI_LABEL);
     if (self->navigation_buttons->len > 0) {
@@ -934,7 +971,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
     const char *lang_name;
     switch (lang) {
         case LANG_ES:
-            title = "Bienvenido a Neko Wizard";
+            title = "Bienvenido a Neko Void";
             subtitle = "Herramientas del sistema para Void Linux.";
             body = "Use Primeros pasos para las tareas recomendadas, o elija una herramienta desde la barra lateral.";
             start_label = "Abrir Primeros pasos";
@@ -943,7 +980,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
             lang_name = "Español";
             break;
         case LANG_JA:
-            title = "Neko Wizard へようこそ";
+            title = "Neko Void へようこそ";
             subtitle = "Void Linux のシステムツール。";
             body = "おすすめの初期設定は「はじめに」から、またはサイドバーからツールを選べます。";
             start_label = "はじめにを開く";
@@ -952,7 +989,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
             lang_name = "日本語";
             break;
         case LANG_IT:
-            title = "Benvenuto a Neko Wizard";
+            title = "Benvenuto a Neko Void";
             subtitle = "Strumenti di sistema per Void Linux.";
             body = "Usa Primi passi per le attività consigliate o scegli uno strumento dalla barra laterale.";
             start_label = "Apri Primi passi";
@@ -961,7 +998,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
             lang_name = "Italiano";
             break;
         default:
-            title = "Welcome to Neko Wizard";
+            title = "Welcome to Neko Void";
             subtitle = "System tools for Void Linux.";
             body = "Use First Steps for recommended setup tasks, or choose a tool from the sidebar whenever you need it.";
             start_label = "Open First Steps";
@@ -980,7 +1017,10 @@ static void update_language(NekoStoreWindow *self, Language lang) {
     if (self->lang_btn) gtk_menu_button_set_label(GTK_MENU_BUTTON(self->lang_btn), lang_name);
     for (guint i = 0; self->ui_text_bindings && i < self->ui_text_bindings->len; ++i)
         apply_ui_binding(g_ptr_array_index(self->ui_text_bindings, i), lang);
-    GtkWidget *dynamic_labels[] = { self->finished_label, self->status_label, self->mirror_status_label };
+    GtkWidget *dynamic_labels[] = { self->finished_label, self->status_label,
+                                    self->mirror_status_label, self->update_detail_label,
+                                    self->package_detail_label, self->package_count_label,
+                                    self->update_count_label };
     for (guint i = 0; i < G_N_ELEMENTS(dynamic_labels); ++i) {
         if (!dynamic_labels[i]) continue;
         const char *source = g_object_get_data(G_OBJECT(dynamic_labels[i]), "ui-status-source");
@@ -999,7 +1039,126 @@ static void on_language_option_toggled(GtkCheckButton *btn, gpointer user_data) 
     if (popover) gtk_popover_popdown(GTK_POPOVER(popover));
 }
 
+static GtkWidget *create_info_card(NekoStoreWindow *self, const char *label_en,
+                                   GtkWidget **value_out, GtkWidget **detail_out) {
+    GtkWidget *card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    gtk_widget_add_css_class(card, "info-card");
+    gtk_widget_set_hexpand(card, TRUE);
+    gtk_widget_set_valign(card, GTK_ALIGN_FILL);
+
+    GtkWidget *label = gtk_label_new(label_en);
+    gtk_widget_add_css_class(label, "info-label");
+    bind_ui_text(self, label, label_en, UI_LABEL);
+    gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+
+    GtkWidget *value = gtk_label_new("—");
+    gtk_widget_add_css_class(value, "info-value");
+    gtk_label_set_xalign(GTK_LABEL(value), 0.0);
+    gtk_label_set_ellipsize(GTK_LABEL(value), PANGO_ELLIPSIZE_END);
+
+    GtkWidget *detail = gtk_label_new("");
+    gtk_widget_add_css_class(detail, "info-detail");
+    gtk_label_set_xalign(GTK_LABEL(detail), 0.0);
+    gtk_label_set_wrap(GTK_LABEL(detail), TRUE);
+    gtk_widget_set_hexpand(detail, TRUE);
+
+    gtk_box_append(GTK_BOX(card), label);
+    gtk_box_append(GTK_BOX(card), value);
+    gtk_box_append(GTK_BOX(card), detail);
+
+    if (value_out) *value_out = value;
+    if (detail_out) *detail_out = detail;
+    return card;
+}
+
+static GtkWidget *create_dashboard_section(NekoStoreWindow *self, const char *title_en,
+                                           const char *desc_en) {
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+    gtk_widget_add_css_class(box, "dashboard-section");
+
+    GtkWidget *title = gtk_label_new(title_en);
+    gtk_widget_add_css_class(title, "section-eyebrow");
+    bind_ui_text(self, title, title_en, UI_LABEL);
+    gtk_label_set_xalign(GTK_LABEL(title), 0.0);
+
+    GtkWidget *desc = gtk_label_new(desc_en);
+    gtk_widget_add_css_class(desc, "section-desc");
+    bind_ui_text(self, desc, desc_en, UI_LABEL);
+    gtk_label_set_xalign(GTK_LABEL(desc), 0.0);
+    gtk_label_set_wrap(GTK_LABEL(desc), TRUE);
+
+    gtk_box_append(GTK_BOX(box), title);
+    gtk_box_append(GTK_BOX(box), desc);
+    return box;
+}
+
+static void package_count_line_cb(const char *line, gpointer user_data) {
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    if (!self->package_count_label || !line) return;
+    char *value = g_strdup(line);
+    g_strstrip(value);
+    if (*value && g_ascii_isdigit(*value)) {
+        g_object_set_data(G_OBJECT(self->package_count_label), "ui-status-source", NULL);
+        gtk_label_set_text(GTK_LABEL(self->package_count_label), value);
+    }
+    g_free(value);
+}
+
+static void package_count_done_cb(gboolean success, gpointer user_data) {
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    if (!self->package_count_label) return;
+    const char *text = gtk_label_get_text(GTK_LABEL(self->package_count_label));
+    (void)success;
+    if (g_strcmp0(text, "…") == 0)
+        set_ui_status(self, self->package_count_label, "Unavailable");
+}
+
+static void update_count_line_cb(const char *line, gpointer user_data) {
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    if (!self->update_count_label || !line) return;
+    char *value = g_strdup(line);
+    g_strstrip(value);
+    if (*value && g_ascii_isdigit(*value)) {
+        gint64 count = g_ascii_strtoll(value, NULL, 10);
+        if (count > 0) {
+            g_object_set_data(G_OBJECT(self->update_count_label), "ui-status-source", NULL);
+            gtk_label_set_text(GTK_LABEL(self->update_count_label), value);
+            if (self->update_detail_label)
+                set_ui_status(self, self->update_detail_label, "updates available");
+        } else if (count == 0) {
+            set_ui_status(self, self->update_count_label, "Up to date");
+            if (self->update_detail_label) {
+                g_object_set_data(G_OBJECT(self->update_detail_label), "ui-status-source", NULL);
+                gtk_label_set_text(GTK_LABEL(self->update_detail_label), "");
+            }
+        }
+    }
+    g_free(value);
+}
+
+static void update_count_done_cb(gboolean success, gpointer user_data) {
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    if (!self->update_count_label) return;
+    const char *text = gtk_label_get_text(GTK_LABEL(self->update_count_label));
+    (void)success;
+    if (g_strcmp0(text, "Checking…") == 0) {
+        set_ui_status(self, self->update_count_label, "Unavailable");
+        if (self->update_detail_label) {
+            g_object_set_data(G_OBJECT(self->update_detail_label), "ui-status-source", NULL);
+            gtk_label_set_text(GTK_LABEL(self->update_detail_label), "");
+        }
+    }
+}
+
 static void build_welcome_page(NekoStoreWindow *self) {
+    GtkWidget *content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_hexpand(content, TRUE);
+    gtk_widget_set_margin_top(content, PAGE_PAD);
+    gtk_widget_set_margin_bottom(content, PAGE_PAD);
+    gtk_widget_set_margin_start(content, PAGE_PAD);
+    gtk_widget_set_margin_end(content, PAGE_PAD);
+
+    /* --- Language selector ------------------------------------------------- */
     GtkWidget *top_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
     gtk_widget_set_valign(top_bar, GTK_ALIGN_START);
     gtk_widget_set_hexpand(top_bar, TRUE);
@@ -1049,28 +1208,33 @@ static void build_welcome_page(NekoStoreWindow *self) {
     gtk_widget_set_valign(self->lang_btn, GTK_ALIGN_CENTER);
     gtk_menu_button_set_popover(GTK_MENU_BUTTON(self->lang_btn), lang_popover);
     gtk_box_append(GTK_BOX(lang_box), self->lang_btn);
-
     gtk_box_append(GTK_BOX(top_bar), lang_box);
+    gtk_box_append(GTK_BOX(content), top_bar);
 
-    GtkWidget *main_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
-    gtk_widget_set_halign(main_content, GTK_ALIGN_FILL);
-    gtk_widget_set_valign(main_content, GTK_ALIGN_START);
-    gtk_widget_set_hexpand(main_content, TRUE);
-    gtk_widget_set_margin_start(main_content, PAGE_PAD);
-    gtk_widget_set_margin_end(main_content, PAGE_PAD);
-    gtk_widget_set_margin_top(main_content, 16);
-    gtk_widget_set_margin_bottom(main_content, 24);
+    /* --- Welcome hero ------------------------------------------------------ */
+    GtkWidget *hero = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 22);
+    gtk_widget_add_css_class(hero, "hero-card");
+    gtk_widget_set_margin_top(hero, 16);
 
     char *logo_path = get_resource_path("resources/logo.png");
     self->welcome_logo = gtk_image_new_from_file(logo_path);
     g_free(logo_path);
-    gtk_image_set_pixel_size(GTK_IMAGE(self->welcome_logo), 56);
-    gtk_widget_add_css_class(self->welcome_logo, "welcome-icon");
+    gtk_image_set_pixel_size(GTK_IMAGE(self->welcome_logo), 72);
+    gtk_widget_add_css_class(self->welcome_logo, "hero-logo");
     gtk_widget_set_halign(self->welcome_logo, GTK_ALIGN_START);
+    gtk_widget_set_valign(self->welcome_logo, GTK_ALIGN_START);
 
-    self->welcome_title = gtk_label_new("Welcome to Neko Wizard");
+    GtkWidget *hero_text = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+    gtk_widget_set_hexpand(hero_text, TRUE);
+
+    GtkWidget *eyebrow = gtk_label_new("NEKO WIZARD");
+    gtk_widget_add_css_class(eyebrow, "hero-eyebrow");
+    gtk_label_set_xalign(GTK_LABEL(eyebrow), 0.0);
+
+    self->welcome_title = gtk_label_new("Welcome to Neko Void");
     gtk_widget_add_css_class(self->welcome_title, "welcome-title");
     gtk_label_set_xalign(GTK_LABEL(self->welcome_title), 0.0);
+    gtk_label_set_wrap(GTK_LABEL(self->welcome_title), TRUE);
 
     self->welcome_subtitle = gtk_label_new("System tools for Void Linux.");
     gtk_widget_add_css_class(self->welcome_subtitle, "welcome-subtitle");
@@ -1085,27 +1249,129 @@ static void build_welcome_page(NekoStoreWindow *self) {
     self->welcome_start_btn = gtk_button_new_with_label("Open First Steps");
     gtk_widget_add_css_class(self->welcome_start_btn, "start-btn");
     gtk_widget_set_halign(self->welcome_start_btn, GTK_ALIGN_START);
-    gtk_widget_set_margin_top(self->welcome_start_btn, 8);
+    gtk_widget_set_margin_top(self->welcome_start_btn, 10);
     g_object_set_data_full(G_OBJECT(self->welcome_start_btn), "page-name",
                            g_strdup("first_steps"), g_free);
     g_signal_connect(self->welcome_start_btn, "clicked",
                      G_CALLBACK(on_hub_action_clicked), self);
 
-    gtk_box_append(GTK_BOX(main_content), self->welcome_logo);
-    gtk_box_append(GTK_BOX(main_content), self->welcome_title);
-    gtk_box_append(GTK_BOX(main_content), self->welcome_subtitle);
-    gtk_box_append(GTK_BOX(main_content), self->welcome_body);
-    gtk_box_append(GTK_BOX(main_content), self->welcome_start_btn);
+    gtk_box_append(GTK_BOX(hero_text), eyebrow);
+    gtk_box_append(GTK_BOX(hero_text), self->welcome_title);
+    gtk_box_append(GTK_BOX(hero_text), self->welcome_subtitle);
+    gtk_box_append(GTK_BOX(hero_text), self->welcome_body);
+    gtk_box_append(GTK_BOX(hero_text), self->welcome_start_btn);
+    gtk_box_append(GTK_BOX(hero), self->welcome_logo);
+    gtk_box_append(GTK_BOX(hero), hero_text);
+    gtk_box_append(GTK_BOX(content), hero);
 
-    GtkWidget *welcome_container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_widget_set_margin_top(top_bar, PAGE_PAD);
-    gtk_widget_set_margin_start(top_bar, PAGE_PAD);
-    gtk_widget_set_margin_end(top_bar, PAGE_PAD);
+    /* --- System overview --------------------------------------------------- */
+    GtkWidget *system_section = create_dashboard_section(
+        self, "SYSTEM OVERVIEW", "System details at a glance.");
+    gtk_widget_set_margin_top(system_section, 28);
+    gtk_box_append(GTK_BOX(content), system_section);
 
-    gtk_box_append(GTK_BOX(welcome_container), top_bar);
-    gtk_box_append(GTK_BOX(welcome_container), main_content);
+    GtkWidget *system_grid = gtk_grid_new();
+    gtk_widget_add_css_class(system_grid, "info-grid");
+    gtk_grid_set_column_homogeneous(GTK_GRID(system_grid), TRUE);
+    gtk_grid_set_column_spacing(GTK_GRID(system_grid), 12);
+    gtk_grid_set_row_spacing(GTK_GRID(system_grid), 12);
+    gtk_widget_set_margin_top(system_grid, 12);
 
-    self->welcome_page = welcome_container;
+    struct utsname uts;
+    gboolean have_uname = (uname(&uts) == 0);
+    gchar *pretty_name = g_get_os_info(G_OS_INFO_KEY_PRETTY_NAME);
+    gchar *version_id = g_get_os_info(G_OS_INFO_KEY_VERSION_ID);
+    gchar *version = g_get_os_info(G_OS_INFO_KEY_VERSION);
+
+    GtkWidget *distro_value = NULL, *distro_detail = NULL;
+    GtkWidget *distro_card = create_info_card(self, "Distribution", &distro_value, &distro_detail);
+    gtk_label_set_text(GTK_LABEL(distro_value), pretty_name ? pretty_name : "Void Linux");
+    if (version_id && *version_id)
+        gtk_label_set_text(GTK_LABEL(distro_detail), version_id);
+    else if (version && *version)
+        gtk_label_set_text(GTK_LABEL(distro_detail), version);
+    else
+        gtk_label_set_text(GTK_LABEL(distro_detail),
+                           ui_tr((Language)self->language, "Rolling release"));
+    gtk_grid_attach(GTK_GRID(system_grid), distro_card, 0, 0, 1, 1);
+
+    GtkWidget *arch_value = NULL, *arch_detail = NULL;
+    GtkWidget *arch_card = create_info_card(self, "Architecture", &arch_value, &arch_detail);
+    gtk_label_set_text(GTK_LABEL(arch_value), have_uname ? uts.machine : "—");
+    if (have_uname) {
+        char *kernel = g_strdup_printf(ui_tr((Language)self->language, "Kernel %s"), uts.release);
+        gtk_label_set_text(GTK_LABEL(arch_detail), kernel);
+        g_free(kernel);
+    }
+    gtk_grid_attach(GTK_GRID(system_grid), arch_card, 1, 0, 1, 1);
+
+    GtkWidget *packages_card = create_info_card(self, "Installed packages",
+                                                &self->package_count_label, &self->package_detail_label);
+    gtk_label_set_text(GTK_LABEL(self->package_count_label), "…");
+    set_ui_status(self, self->package_detail_label, "via xbps");
+    gtk_grid_attach(GTK_GRID(system_grid), packages_card, 2, 0, 1, 1);
+
+    GtkWidget *updates_card = create_info_card(self, "Updates",
+                                               &self->update_count_label,
+                                               &self->update_detail_label);
+    set_ui_status(self, self->update_count_label, "Checking…");
+    set_ui_status(self, self->update_detail_label, "Repository update status.");
+    gtk_grid_attach(GTK_GRID(system_grid), updates_card, 3, 0, 1, 1);
+
+    gtk_box_append(GTK_BOX(content), system_grid);
+    g_free(pretty_name);
+    g_free(version_id);
+    g_free(version);
+
+    /* --- Quick actions ----------------------------------------------------- */
+    GtkWidget *quick_section = create_dashboard_section(
+        self, "QUICK ACTIONS", "Jump straight to the tool you need.");
+    gtk_widget_set_margin_top(quick_section, 28);
+    gtk_box_append(GTK_BOX(content), quick_section);
+
+    GtkWidget *quick_grid = gtk_grid_new();
+    gtk_widget_add_css_class(quick_grid, "quick-grid");
+    gtk_grid_set_column_homogeneous(GTK_GRID(quick_grid), TRUE);
+    gtk_grid_set_column_spacing(GTK_GRID(quick_grid), 12);
+    gtk_grid_set_row_spacing(GTK_GRID(quick_grid), 12);
+    gtk_widget_set_margin_top(quick_grid, 12);
+
+    GtkWidget *qa_software = create_tool_button(TOOL_ICON_SOFTWARE, "Software Manager",
+        "Browse and install applications by category.", "apps_home", self);
+    gtk_widget_add_css_class(qa_software, "quick-action");
+    gtk_grid_attach(GTK_GRID(quick_grid), qa_software, 0, 0, 1, 1);
+
+    GtkWidget *qa_drivers = create_tool_button(TOOL_ICON_HARDWARE, "Driver Manager",
+        "Set up graphics, Bluetooth, and printer support.", "drivers", self);
+    gtk_widget_add_css_class(qa_drivers, "quick-action");
+    gtk_grid_attach(GTK_GRID(quick_grid), qa_drivers, 1, 0, 1, 1);
+
+    GtkWidget *qa_mirror = create_tool_button(TOOL_ICON_REPOSITORY, "Software Sources",
+        "Test and change the system repository mirror.", "mirror", self);
+    gtk_widget_add_css_class(qa_mirror, "quick-action");
+    gtk_grid_attach(GTK_GRID(quick_grid), qa_mirror, 2, 0, 1, 1);
+
+    GtkWidget *qa_update = create_tool_button(TOOL_ICON_UPDATE, "Update Manager",
+        "Install available system updates.", "update", self);
+    gtk_widget_add_css_class(qa_update, "quick-action");
+    gtk_grid_attach(GTK_GRID(quick_grid), qa_update, 3, 0, 1, 1);
+
+    gtk_box_append(GTK_BOX(content), quick_grid);
+
+    GtkWidget *scrolled = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
+                                   GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), content);
+    gtk_widget_set_hexpand(scrolled, TRUE);
+    gtk_widget_set_vexpand(scrolled, TRUE);
+    self->welcome_page = scrolled;
+
+    /* Real data only: count local packages and check pending updates without
+       blocking the interface. Failures show as "Unavailable". */
+    install_app_async("command -v xbps-query >/dev/null 2>&1 && xbps-query -l 2>/dev/null | wc -l",
+                      package_count_line_cb, package_count_done_cb, self);
+    install_app_async("command -v xbps-install >/dev/null 2>&1 && timeout 12 xbps-install -un 2>/dev/null | wc -l",
+                      update_count_line_cb, update_count_done_cb, self);
 }
 
 static void on_category_clicked(GtkButton *button, gpointer user_data) {
@@ -1302,17 +1568,25 @@ static GtkWidget *build_update_page(NekoStoreWindow *self) {
 
 static GtkWidget *build_sidebar(NekoStoreWindow *self) {
     self->navigation_buttons = g_ptr_array_new();
-    GtkWidget *sidebar = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+    GtkWidget *sidebar = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_add_css_class(sidebar, "app-sidebar");
-    gtk_widget_set_size_request(sidebar, 250, -1);
+    gtk_widget_set_size_request(sidebar, 260, -1);
     gtk_widget_set_hexpand(sidebar, FALSE);
     gtk_widget_set_vexpand(sidebar, TRUE);
     gtk_widget_set_halign(sidebar, GTK_ALIGN_START);
 
-    GtkWidget *brand_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    gtk_widget_set_margin_top(brand_row, 12);
-    gtk_widget_set_margin_start(brand_row, 10);
-    gtk_widget_set_margin_bottom(brand_row, 12);
+    GtkWidget *brand_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    gtk_widget_add_css_class(brand_row, "sidebar-brand-row");
+    gtk_widget_set_valign(brand_row, GTK_ALIGN_CENTER);
+
+    char *logo_path = get_resource_path("resources/logo.png");
+    GtkWidget *brand_logo = gtk_image_new_from_file(logo_path);
+    g_free(logo_path);
+    gtk_image_set_pixel_size(GTK_IMAGE(brand_logo), 26);
+    gtk_widget_set_valign(brand_logo, GTK_ALIGN_CENTER);
+    gtk_widget_add_css_class(brand_logo, "sidebar-brand-logo");
+    gtk_box_append(GTK_BOX(brand_row), brand_logo);
+
     GtkWidget *brand = gtk_label_new("Neko Wizard");
     gtk_widget_add_css_class(brand, "sidebar-brand");
     gtk_widget_set_halign(brand, GTK_ALIGN_START);
@@ -1324,12 +1598,10 @@ static GtkWidget *build_sidebar(NekoStoreWindow *self) {
     gtk_widget_add_css_class(start_section, "sidebar-section-title");
     bind_ui_text(self, start_section, "HOME", UI_LABEL);
     gtk_widget_set_halign(start_section, GTK_ALIGN_START);
-    gtk_widget_set_margin_start(start_section, 10);
-    gtk_widget_set_margin_bottom(start_section, 2);
     gtk_box_append(GTK_BOX(sidebar), start_section);
 
-    GtkWidget *overview = create_sidebar_button(self, "Overview", "welcome");
-    GtkWidget *first_steps = create_sidebar_button(self, "First Steps", "first_steps");
+    GtkWidget *overview = create_sidebar_button(self, "go-home-symbolic", "Overview", "welcome");
+    GtkWidget *first_steps = create_sidebar_button(self, "starred-symbolic", "First Steps", "first_steps");
     gtk_box_append(GTK_BOX(sidebar), overview);
     gtk_box_append(GTK_BOX(sidebar), first_steps);
 
@@ -1337,28 +1609,40 @@ static GtkWidget *build_sidebar(NekoStoreWindow *self) {
     gtk_widget_add_css_class(section, "sidebar-section-title");
     bind_ui_text(self, section, "TOOLS", UI_LABEL);
     gtk_widget_set_halign(section, GTK_ALIGN_START);
-    gtk_widget_set_margin_start(section, 10);
     gtk_widget_set_margin_top(section, 12);
-    gtk_widget_set_margin_bottom(section, 2);
     gtk_box_append(GTK_BOX(sidebar), section);
-    gtk_box_append(GTK_BOX(sidebar), create_sidebar_button(self, "Software Manager", "apps_home"));
-    gtk_box_append(GTK_BOX(sidebar), create_sidebar_button(self, "Driver Manager", "drivers"));
-    gtk_box_append(GTK_BOX(sidebar), create_sidebar_button(self, "Software Sources", "mirror"));
-    gtk_box_append(GTK_BOX(sidebar), create_sidebar_button(self, "Update Manager", "update"));
+    gtk_box_append(GTK_BOX(sidebar),
+                   create_sidebar_button(self, "neko-store-symbolic", "Software Manager", "apps_home"));
+    gtk_box_append(GTK_BOX(sidebar),
+                   create_sidebar_button(self, "neko-cpu-symbolic", "Driver Manager", "drivers"));
+    gtk_box_append(GTK_BOX(sidebar),
+                   create_sidebar_button(self, "neko-server-symbolic", "Software Sources", "mirror"));
+    gtk_box_append(GTK_BOX(sidebar),
+                   create_sidebar_button(self, "neko-refresh-symbolic", "Update Manager", "update"));
 
     GtkWidget *spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_vexpand(spacer, TRUE);
     gtk_box_append(GTK_BOX(sidebar), spacer);
 
+    GtkWidget *footer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+    gtk_widget_add_css_class(footer, "sidebar-footer");
+
     self->help_btn = gtk_button_new_with_label("Help");
     gtk_widget_add_css_class(self->help_btn, "about-btn");
     g_signal_connect(self->help_btn, "clicked", G_CALLBACK(on_help_clicked), self);
-    gtk_box_append(GTK_BOX(sidebar), self->help_btn);
+    gtk_box_append(GTK_BOX(footer), self->help_btn);
 
     self->about_btn = gtk_button_new_with_label("About");
     gtk_widget_add_css_class(self->about_btn, "about-btn");
     g_signal_connect(self->about_btn, "clicked", G_CALLBACK(on_about_clicked), self);
-    gtk_box_append(GTK_BOX(sidebar), self->about_btn);
+    gtk_box_append(GTK_BOX(footer), self->about_btn);
+
+    GtkWidget *version = gtk_label_new("Neko Wizard " NEKO_VERSION);
+    gtk_widget_add_css_class(version, "version-label");
+    gtk_widget_set_halign(version, GTK_ALIGN_START);
+    gtk_box_append(GTK_BOX(footer), version);
+
+    gtk_box_append(GTK_BOX(sidebar), footer);
 
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(overview), TRUE);
     self->sidebar = sidebar;
