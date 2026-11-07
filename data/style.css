@@ -1,56 +1,46 @@
-/* Neko Wizard: clear native controls, calm surfaces, and semantic theme colors. */
+/* Neko Wizard: fixed Neko palette, clear native controls and squared surfaces. */
 
-/* --- Theme bridge ---------------------------------------------------------
-   These are the standard libadwaita colour names. Noctalia's template
-   processor writes them to ~/.config/gtk-4.0/noctalia.css, which GTK loads at
-   USER priority — above this file — so wherever Noctalia is installed its
-   values win and the app tracks the system theme with no code involved.
-   The values below are only the fallback for systems without it.
-   Any tool that emits the same names (matugen, pywal templates, stock
-   libadwaita) drives the app just as well.
+/* --- Hardcoded Neko palette ------------------------------------------------
+   The application ships its own fixed palette. These values are intentionally
+   hardcoded rather than inherited from the desktop theme so the interface
+   always renders with the same identity.
    -------------------------------------------------------------------------- */
-/* Fallback palette — only active when no system theme (Noctalia, libadwaita,
-   The names on the RIGHT are GTK4 Adwaita built-ins, available on every GTK4
-   desktop without any third-party theme. When a higher-priority provider
-   (libadwaita, Noctalia, matugen, pywal…) has already defined the names on
-   the LEFT, GTK silently ignores these lines — the system values win.
-   No hex codes, ever. The app always reflects the active system palette.
-   -------------------------------------------------------------------------- */
-/* Use app-prefixed aliases so the app stylesheet can outrank desktop CSS
-   without shadowing Noctalia/libadwaita's semantic palette definitions. */
-@define-color nk_window_bg    @window_bg_color;
-@define-color nk_window_fg    @window_fg_color;
-@define-color nk_view_bg      @view_bg_color;
-@define-color nk_view_fg      @view_fg_color;
-@define-color nk_card_bg      @card_bg_color;
-@define-color nk_headerbar_bg @headerbar_bg_color;
-@define-color nk_headerbar_fg @headerbar_fg_color;
-@define-color nk_accent_bg    @accent_bg_color;
-@define-color nk_accent_fg    @accent_fg_color;
-@define-color nk_error_bg     @error_bg_color;
-@define-color nk_error_fg     @error_fg_color;
+@define-color nk_window_bg  #1e2320;
+@define-color nk_window_fg  #d3cdc3;
+@define-color nk_view_bg    #1e2320;
+@define-color nk_view_fg    #d3cdc3;
+@define-color nk_card_bg    #272e2a;
+@define-color nk_headerbar_bg #272e2a;
+@define-color nk_headerbar_fg #d3cdc3;
+@define-color nk_accent_bg  #8da383;
+@define-color nk_accent_fg  #1e2320;
+@define-color nk_error_bg   #c27979;
+@define-color nk_error_fg   #1e2320;
 
-/* --- Palette: semantic tokens ---------------------------------------------
-   Everything below is expressed as a mix or alias of the bridge names above,
-   so overriding one bridge colour repaints all derived tokens coherently.
-   GTK resolves these lazily, so Noctalia/libadwaita overrides propagate
-   through the mix() calls automatically.
-   -------------------------------------------------------------------------- */
-@define-color bg           @nk_window_bg;
-@define-color surface      @nk_card_bg;
-@define-color surface_hi   mix(@nk_card_bg, @nk_window_fg, 0.07);
-@define-color border       mix(@nk_window_bg, @nk_window_fg, 0.14);
-@define-color border_hi    mix(@nk_window_bg, @nk_window_fg, 0.28);
-@define-color text         @nk_window_fg;
-@define-color text_soft    mix(@nk_window_fg, @nk_window_bg, 0.25);
-@define-color text_dim     mix(@nk_window_fg, @nk_window_bg, 0.45);
-@define-color accent       @nk_accent_bg;
-@define-color accent_hi    mix(@nk_accent_bg, @nk_window_fg, 0.20);
-@define-color on_accent    @nk_accent_fg;
+/* --- Palette: semantic tokens --------------------------------------------- */
+@define-color bg           #1e2320;
+@define-color surface      #272e2a;
+@define-color surface_hi   mix(#272e2a, #d3cdc3, 0.08);
+@define-color border       #4a534d;
+@define-color border_hi    #7f9193;
+@define-color text         #d3cdc3;
+@define-color text_soft    mix(#d3cdc3, #1e2320, 0.25);
+@define-color text_dim     #7f9193;
+@define-color accent       #8da383;
+@define-color accent_hi    mix(#8da383, #d3cdc3, 0.20);
+@define-color on_accent    #1e2320;
+@define-color cyan         #7a998d;
+@define-color green        #8da383;
+@define-color orange       #cb9b7c;
+@define-color pink         #a48fa1;
+@define-color purple       #baa9b8;
+@define-color yellow       #dbb095;
+@define-color red          #c27979;
+@define-color divider      #4a534d;
+@define-color divider_strong #7f9193;
 
-/* The tokens above are derived symmetrically — border/hover mix *towards* the
-   foreground, dim text mixes *towards* the background — so the same rules
-   render correctly for dark or light system themes alike. */
+/* The palette is fixed: this app intentionally does not follow the desktop
+   theme colours. Derived tokens are mixed from the hardcoded values above. */
 
 window {
     background-color: @bg;
@@ -802,6 +792,7 @@ scrollbar slider:hover {
 /* --- Sidebar -------------------------------------------------------------- */
 
 .app-sidebar {
+    min-width: 280px;
     background-color: @surface;
     border-right: 1px solid @border;
     padding: 0;
@@ -1163,4 +1154,44 @@ progressbar progress {
 /* Keep the whole interface square even for widgets added later. */
 * {
     border-radius: 0;
+}
+
+/* --- Native controls: apply the fixed palette ----------------------------- */
+
+checkbutton check,
+checkbutton radio {
+    background-color: @surface;
+    border: 1px solid @border;
+    color: @on_accent;
+}
+
+checkbutton check:hover,
+checkbutton radio:hover {
+    border-color: @border_hi;
+}
+
+checkbutton check:checked,
+checkbutton radio:checked {
+    background-color: @accent;
+    border-color: @accent;
+    color: @on_accent;
+}
+
+checkbutton check:indeterminate {
+    background-color: @accent;
+    border-color: @accent;
+    color: @on_accent;
+}
+
+switch {
+    background-color: @border;
+}
+
+switch:checked {
+    background-color: @accent;
+}
+
+selection {
+    background-color: @accent;
+    color: @on_accent;
 }

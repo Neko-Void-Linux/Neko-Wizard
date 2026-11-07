@@ -1570,7 +1570,7 @@ static GtkWidget *build_sidebar(NekoStoreWindow *self) {
     self->navigation_buttons = g_ptr_array_new();
     GtkWidget *sidebar = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_add_css_class(sidebar, "app-sidebar");
-    gtk_widget_set_size_request(sidebar, 260, -1);
+    gtk_widget_set_size_request(sidebar, 280, -1);
     gtk_widget_set_hexpand(sidebar, FALSE);
     gtk_widget_set_vexpand(sidebar, TRUE);
     gtk_widget_set_halign(sidebar, GTK_ALIGN_START);
