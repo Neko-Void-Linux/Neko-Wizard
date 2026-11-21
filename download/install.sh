@@ -132,7 +132,7 @@ install_reaper() {
 install_obs() {
     log "Installing OBS Studio..."
     pkexec xbps-install -Sy obs
-}spotify-nk
+}
 
 install_kdenlive() {
     log "Installing Kdenlive..."
