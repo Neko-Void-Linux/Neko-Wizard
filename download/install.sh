@@ -121,17 +121,14 @@ install_faugus() {
 # ------------------------------------------------------------------------------
 
 install_reaper() {
-    log "Installing Reaper (Tarball)..."
-    curl -L -o /tmp/reaper.tar.xz https://github.com/Neko-Void-Linux/Neko-Wizard/releases/download/tars/reaper779_linux_x86_64.tar.xz && \
-    tar -xf /tmp/reaper.tar.xz -C /tmp && \
-    cd /tmp/reaper_linux_x86_64 && \
-    sh install-reaper.sh --install ~/opt --integrate-user-desktop --quiet
+    log "Installing Reaper"
+    pkexec xbps-install -Syu reaper
 }
 
 install_obs() {
     log "Installing OBS Studio..."
     pkexec xbps-install -Sy obs
-}
+}spotify-nk
 
 install_kdenlive() {
     log "Installing Kdenlive..."
@@ -187,9 +184,8 @@ install_inkscape() {
 # ------------------------------------------------------------------------------
 
 install_spotify() {
-    log "Installing Spotify (Flatpak)..."
-    flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-    flatpak install --user flathub com.spotify.Client -y
+    log "Installing Spotify ..."
+    pkexec xbps-install -Syu spotify-nk
 }
 
 install_vesktop() {
@@ -232,28 +228,9 @@ install_chromium() {
 # ------------------------------------------------------------------------------
 
 install_onlyoffice() {
-    # OnlyOffice ships as an AppImage; AppImageLauncher Lite integrates it into
-    # the desktop menu. Both are user-level (no pkexec needed).
-    # Note: "cli integrate" works without systemd (important on Void/runit).
-    local dir="$HOME/apps"
-    local launcher="$dir/appimagelauncher-lite.AppImage"
-    local editors="$dir/DesktopEditors-x86_64.AppImage"
-
-    log "Downloading AppImageLauncher..."
-    mkdir -p "$dir" || die "Could not create $dir"
-    curl -fsSL -o "$launcher" \
-        "https://github.com/TheAssassin/AppImageLauncher/releases/download/v2.2.0/appimagelauncher-lite-2.2.0-travis995-0f91801-x86_64.AppImage" \
-        || die "Failed to download AppImageLauncher"
-    chmod +x "$launcher"
-
-    log "Downloading OnlyOffice..."
-    curl -fsSL -o "$editors" \
-        "https://github.com/ONLYOFFICE/appimage-desktopeditors/releases/download/v9.4.0/DesktopEditors-x86_64.AppImage" \
-        || die "Failed to download OnlyOffice"
-    chmod +x "$editors"
-
-    log "Integrating OnlyOffice into the desktop (AppImageLauncher)..."
-    "$launcher" cli integrate "$editors"
+    
+    log "Installing OnlyOffice..."
+    pkexec xbps-install -Syu onlyoffice
 }
 
 install_kate() {
