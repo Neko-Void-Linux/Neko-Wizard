@@ -71,7 +71,7 @@ install_steam() {
     '
 }
 
-install_epicgames(){
+install_epicgames() {
     pkexec xbps-install -Syu epic-games-launcher   
 }
 
