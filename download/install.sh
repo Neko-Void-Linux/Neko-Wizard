@@ -232,7 +232,6 @@ install_chromium() {
 # ------------------------------------------------------------------------------
 
 install_onlyoffice() {
-    
     log "Installing OnlyOffice..."
     pkexec xbps-install -Syu onlyoffice
 }
