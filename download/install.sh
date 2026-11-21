@@ -71,6 +71,10 @@ install_steam() {
     '
 }
 
+install_epicgames(){
+    pkexec xbps-install -Syu epic-games-launcher   
+}
+
 install_portproton() {
     log "Installing PortProton..."
     pkexec xbps-install -Sy portproton
@@ -380,7 +384,7 @@ case "$APP" in
     nvidia-580)    install_nvidia_580 ;;
     nvidia-470)    install_nvidia_470 ;;
     nvidia-390)    install_nvidia_390 ;;
-
+    epicgames)     isntall_epicgames ;;
     gufw)          install_gufw ;;
 
     *)             die "Unknown app-id: '$APP'. Run '$0 list' to see the available ids." ;;
