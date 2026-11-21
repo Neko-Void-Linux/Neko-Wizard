@@ -19,13 +19,17 @@
 #  the result. Every step logs a line prefixed with [neko] to stdout; the app
 #  shows those lines in its progress label.
 # ==============================================================================
-fix(){
-    pkexec xbps-install -Syu
-}
+
 set -u
 
 log() { printf '[neko] %s\n' "$*"; }
 die() { printf '[neko] ERROR: %s\n' "$*" >&2; exit 1; }
+
+fix() {
+    log "Updating system packages and shared libraries (xbps-install -Syu)..."
+    pkexec sh -c 'xbps-install -Syu xbps && xbps-install -Syu' \
+        || die "Failed to update system packages before installation."
+}
 
 # Run a whole script under a single pkexec session. Flatpaks are installed
 # system-wide, so every flatpak command inside the script reuses the same
@@ -59,10 +63,12 @@ list_apps() {
 
 install_steam() {
     log "Installing Steam (void-repo-nonfree + multilib + 32bit libs)..."
-    fix
-    pkexec xbps-install -Sy void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree \
-        && pkexec xbps-install -Sy steam-udev-rules MangoHud gamescope libGL-32bit libpulseaudio-32bit libtxc_dxtn-32bit \
-        mesa mesa-dri mesa-vulkan-radeon vulkan-loader mesa-32bit  libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit steam-bin
+    pkexec sh -c '
+        xbps-install -Sy void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree && \
+        xbps-install -Syu && \
+        xbps-install -Sy steam-udev-rules MangoHud gamescope libGL-32bit libpulseaudio-32bit libtxc_dxtn-32bit \
+            mesa mesa-dri mesa-vulkan-radeon vulkan-loader mesa-32bit libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit steam-bin
+    '
 }
 
 install_portproton() {
@@ -296,7 +302,7 @@ download_nvidia_support() {
 
 install_nvidia_open() {
     download_nvidia_support
-    log "Installing NVIDIA (open kernel modules)..."
+    log "Installing NVIDIA (open kernel modules 620.73.04)..."
     pkexec bash /tmp/nvidia-support-main/install.sh open
 }
 
@@ -324,7 +330,6 @@ install_nvidia_390() {
     pkexec bash /tmp/nvidia-support-main/install.sh 390
 }
 
-
 # ------------------------------------------------------------------------------
 # Security
 # ------------------------------------------------------------------------------
@@ -341,6 +346,15 @@ install_gufw() {
 # ------------------------------------------------------------------------------
 
 APP="${1:-}"
+
+case "$APP" in
+    list)           list_apps; exit 0 ;;
+    help|-h|--help) usage; exit 0 ;;
+    "")             die "Missing app-id. Usage: $0 <app-id> (or '$0 list' to see the available ids)" ;;
+esac
+
+# Actualizar el sistema antes de instalar cualquier aplicación o driver
+fix
 
 case "$APP" in
     steam)         install_steam ;;
@@ -392,9 +406,6 @@ case "$APP" in
 
     gufw)          install_gufw ;;
 
-    list)          list_apps ;;
-    help|-h|--help) usage ;;
-    "")            die "Missing app-id. Usage: $0 <app-id> (or '$0 list' to see the available ids)" ;;
     *)             die "Unknown app-id: '$APP'. Run '$0 list' to see the available ids." ;;
 esac
 rc=$?
