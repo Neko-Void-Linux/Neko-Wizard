@@ -19,7 +19,9 @@
 #  the result. Every step logs a line prefixed with [neko] to stdout; the app
 #  shows those lines in its progress label.
 # ==============================================================================
-
+fix(){
+    pkexec xbps-install -Syu
+}
 set -u
 
 log() { printf '[neko] %s\n' "$*"; }
@@ -57,6 +59,7 @@ list_apps() {
 
 install_steam() {
     log "Installing Steam (void-repo-nonfree + multilib + 32bit libs)..."
+    fix
     pkexec xbps-install -Sy void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree \
         && pkexec xbps-install -Sy steam-udev-rules MangoHud gamescope libGL-32bit libpulseaudio-32bit libtxc_dxtn-32bit \
         mesa mesa-dri mesa-vulkan-radeon vulkan-loader mesa-32bit  libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit steam-bin
