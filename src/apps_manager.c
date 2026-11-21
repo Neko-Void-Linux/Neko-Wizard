@@ -10,6 +10,7 @@
 
 static AppInfo apps[] = {
     {"Steam", "steam.png", INSTALL_APP("steam"), GROUP_GAMING, FALSE, FALSE},
+    {"Epicgames", "epicgames.png", INSTALL_APP("epicgames"), GROUP_GAMING, FALSE, FALSE},
     {"PortProton", "portproton.png", INSTALL_APP("portproton"), GROUP_GAMING, FALSE, FALSE},
     {"Heroic Games Launcher", "heroic.png", INSTALL_APP("heroic"), GROUP_GAMING, FALSE, FALSE},
     {"Lutris", "lutris.png", INSTALL_APP("lutris"), GROUP_GAMING, FALSE, FALSE},
