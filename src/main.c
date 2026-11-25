@@ -15,6 +15,9 @@ main (int argc, char **argv)
 {
   setlocale (LC_ALL, "");
   g_setenv ("GSK_RENDERER", "gl", FALSE);
+  // Isolate the UI from the desktop GTK theme so external themes never inject
+  // colors, gradients, or check/radio bitmap assets into Neko Wizard.
+  g_setenv ("GTK_THEME", "Default:dark", TRUE);
   // Avoid forwarding this launch to an already-running app instance that uses
   // the generic ID from an older Neko Wizard build.
   g_autoptr(GtkApplication) app = gtk_application_new ("com.nekowizard.neko-wizard", G_APPLICATION_DEFAULT_FLAGS);

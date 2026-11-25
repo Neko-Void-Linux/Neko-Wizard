@@ -587,10 +587,18 @@ popover checkbutton {
 }
 
 .toolbar {
-    padding-bottom: 8px;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    padding: 0 0 8px 0;
 }
 
 .footer {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
     padding-top: 8px;
 }
 
@@ -1213,39 +1221,258 @@ textview.install-log-view > text > selection {
     border-radius: 0;
 }
 
-/* --- Native controls: apply the fixed palette ----------------------------- */
+/* --- Self-contained controls: fully independent of desktop GTK themes ----- */
 
-checkbutton check,
-checkbutton radio {
+window:backdrop {
+    background-color: @bg;
+    color: @text;
+}
+
+headerbar:backdrop {
+    background-color: @nk_headerbar_bg;
+    color: @nk_headerbar_fg;
+}
+
+scrolledwindow,
+scrolledwindow > viewport {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+}
+
+popover > arrow,
+popover > contents,
+popover > box,
+popover.menu > contents {
     background-color: @surface;
+    background-image: none;
+    color: @text;
     border: 1px solid @border;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+popover.menu modelbutton {
+    min-height: 30px;
+    padding: 4px 12px;
+    background-color: transparent;
+    background-image: none;
+    color: @text;
+    border: none;
+    box-shadow: none;
+}
+
+popover.menu modelbutton:hover {
+    background-color: @surface_hi;
+    color: @text;
+}
+
+popover.menu modelbutton:disabled {
+    color: @text_dim;
+}
+
+tooltip,
+tooltip.background {
+    background-color: @surface;
+    background-image: none;
+    color: @text;
+    border: 1px solid @border;
+    box-shadow: none;
+}
+
+checkbutton {
+    color: @text;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    border-spacing: 8px;
+    padding: 2px 0;
+    outline: none;
+    transition: none;
+}
+
+checkbutton:hover {
+    color: @text;
+    background-color: transparent;
+    background-image: none;
+}
+
+checkbutton:disabled {
+    color: @text_dim;
+    opacity: 0.62;
+}
+
+checkbutton:focus-visible {
+    outline: 2px solid @accent;
+    outline-offset: 2px;
+}
+
+popover checkbutton {
+    padding: 6px 10px;
+}
+
+popover checkbutton:hover {
+    background-color: @surface_hi;
+}
+
+checkbutton > check,
+checkbutton > radio,
+check,
+radio {
+    min-width: 16px;
+    min-height: 16px;
+    padding: 0;
+    margin: 0;
+    background-color: @surface;
+    background-image: none;
+    background-clip: padding-box;
+    border: 1px solid @border_hi;
+    border-radius: 0;
+    box-shadow: none;
     color: @on_accent;
+    -gtk-icon-source: none;
+    -gtk-icon-shadow: none;
+    -gtk-icon-size: 14px;
+    transition: none;
 }
 
-checkbutton check:hover,
-checkbutton radio:hover {
-    border-color: @border_hi;
-}
-
-checkbutton check:checked,
-checkbutton radio:checked {
-    background-color: @accent;
+checkbutton:hover > check,
+checkbutton:hover > radio,
+check:hover,
+radio:hover {
+    background-color: @surface_hi;
+    background-image: none;
     border-color: @accent;
+    box-shadow: none;
+}
+
+checkbutton:active > check,
+checkbutton:active > radio,
+check:active,
+radio:active {
+    background-color: @border;
+    background-image: none;
+    border-color: @accent;
+    box-shadow: none;
+}
+
+checkbutton > check:checked,
+check:checked {
+    background-color: @accent;
+    background-image: none;
+    border-color: @accent;
+    box-shadow: none;
+    color: @on_accent;
+    -gtk-icon-source: -gtk-icontheme("neko-check-symbolic");
+    -gtk-icon-shadow: none;
+}
+
+checkbutton:hover > check:checked,
+check:checked:hover {
+    background-color: @accent_hi;
+    background-image: none;
+    border-color: @accent_hi;
+    box-shadow: none;
     color: @on_accent;
 }
 
-checkbutton check:indeterminate {
+checkbutton:active > check:checked,
+check:checked:active {
     background-color: @accent;
+    background-image: none;
     border-color: @accent;
+    box-shadow: none;
     color: @on_accent;
+}
+
+checkbutton > radio:checked,
+radio:checked {
+    background-color: @surface;
+    background-image: none;
+    border-color: @accent;
+    box-shadow: none;
+    color: @accent;
+    -gtk-icon-source: -gtk-icontheme("neko-radio-symbolic");
+    -gtk-icon-shadow: none;
+}
+
+checkbutton:hover > radio:checked,
+radio:checked:hover {
+    background-color: @surface_hi;
+    background-image: none;
+    border-color: @accent_hi;
+    box-shadow: none;
+    color: @accent_hi;
+}
+
+checkbutton:active > radio:checked,
+radio:checked:active {
+    background-color: @surface;
+    background-image: none;
+    border-color: @accent;
+    box-shadow: none;
+    color: @accent;
+}
+
+checkbutton > check:indeterminate,
+checkbutton > radio:indeterminate,
+check:indeterminate,
+radio:indeterminate {
+    background-color: @accent;
+    background-image: none;
+    border-color: @accent;
+    box-shadow: none;
+    color: @on_accent;
+    -gtk-icon-source: -gtk-icontheme("neko-dash-symbolic");
+    -gtk-icon-shadow: none;
+}
+
+checkbutton > check:disabled,
+checkbutton > radio:disabled,
+check:disabled,
+radio:disabled {
+    background-color: @surface;
+    background-image: none;
+    border-color: @border;
+    box-shadow: none;
+    color: @text_dim;
+    opacity: 0.62;
+}
+
+checkbutton > check:backdrop,
+checkbutton > radio:backdrop,
+check:backdrop,
+radio:backdrop {
+    background-image: none;
+    box-shadow: none;
 }
 
 switch {
-    background-color: @border;
+    background-color: @surface;
+    background-image: none;
+    border: 1px solid @border;
+    box-shadow: none;
+    color: @text;
 }
 
 switch:checked {
     background-color: @accent;
+    background-image: none;
+    border-color: @accent;
+    color: @on_accent;
+}
+
+switch > slider {
+    background-color: @text;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+}
+
+switch:checked > slider {
+    background-color: @on_accent;
 }
 
 selection {
