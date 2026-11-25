@@ -112,7 +112,11 @@ static const UiTranslation ui_translations[] = {
     {"System update complete", "Actualización del sistema completada", "システム更新完了", "Aggiornamento del sistema completato"},
     {"System update failed", "Falló la actualización del sistema", "システム更新に失敗しました", "Aggiornamento del sistema non riuscito"},
     {"The update command finished successfully.", "El comando de actualización terminó correctamente.", "更新コマンドが正常に終了しました。", "Il comando di aggiornamento è terminato correttamente."},
-    {"Check the output above for details, then try again.", "Revisa la salida anterior y vuelve a intentarlo.", "上の出力を確認して再試行してください。", "Controlla l'output qui sopra e riprova."},
+    {"Check the logs below for details, then try again.", "Revisa los logs de abajo para ver los detalles e inténtalo de nuevo.", "下のログで詳細を確認して、もう一度お試しください。", "Controlla i log qui sotto per i dettagli, poi riprova."},
+    {"Show logs", "Mostrar logs", "ログを表示", "Mostra log"},
+    {"Hide logs", "Ocultar logs", "ログを隠す", "Nascondi log"},
+    {"Copy logs", "Copiar logs", "ログをコピー", "Copia log"},
+    {"Copied", "Copiado", "コピーしました", "Copiato"},
     {"Updating system…", "Actualizando el sistema…", "システムを更新中…", "Aggiornamento del sistema…"},
     {"Running xbps-install -Syu", "Ejecutando xbps-install -Syu", "xbps-install -Syu を実行中", "Esecuzione di xbps-install -Syu"},
     {"Nothing selected", "No hay elementos seleccionados", "項目が選択されていません", "Nessun elemento selezionato"},
@@ -238,9 +242,20 @@ struct _NekoStoreWindow {
     GtkWidget *security_flowbox;
 
     GtkWidget *finished_page;
+    GtkWidget *finished_top_spacer;
+    GtkWidget *finished_bottom_spacer;
     GtkWidget *finished_label;
     GtkWidget *progress_bar;
     GtkWidget *status_label;
+    GtkWidget *log_actions_box;
+    GtkWidget *toggle_logs_btn;
+    GtkWidget *copy_logs_btn;
+    GtkWidget *log_scrolled;
+    GtkWidget *log_view;
+    GtkTextBuffer *log_buffer;
+    GtkTextMark *log_end_mark;
+    gboolean logs_visible;
+    guint copy_feedback_id;
     GtkWidget *finished_back_btn;
     char *finished_return_page_name;
 
@@ -688,6 +703,176 @@ static GtkWidget* create_app_group_page(NekoStoreWindow *self, int step_number, 
 
 static void install_next_app(NekoStoreWindow *self);
 
+/* Strips ANSI terminal escape codes, cleans carriage-return overwrites, and
+ * ensures valid UTF-8 before inserting command output into GtkTextBuffer. */
+static char *sanitize_log_line(const char *line) {
+    char *valid = g_utf8_make_valid(line, -1);
+    GString *out = g_string_sized_new(strlen(valid));
+
+    for (const unsigned char *p = (const unsigned char *)valid; *p != '\0'; ) {
+        if (*p == 0x1B) {
+            p++;
+            if (*p == '[') {
+                p++;
+                while (*p != '\0' && (*p < 0x40 || *p > 0x7E)) p++;
+                if (*p != '\0') p++;
+            } else if (*p == ']') {
+                p++;
+                while (*p != '\0' && *p != 0x07) {
+                    if (*p == 0x1B && *(p + 1) == '\\') {
+                        p += 2;
+                        break;
+                    }
+                    p++;
+                }
+                if (*p == 0x07) p++;
+            } else if (*p != '\0') {
+                p++;
+            }
+            continue;
+        }
+        if (*p == '\r') {
+            if (*(p + 1) != '\0' && *(p + 1) != '\r') {
+                g_string_truncate(out, 0);
+            }
+            p++;
+            continue;
+        }
+        g_string_append_c(out, (char)*p);
+        p++;
+    }
+
+    g_free(valid);
+    return g_string_free(out, FALSE);
+}
+
+static void update_logs_toggle_ui(NekoStoreWindow *self) {
+    if (self->toggle_logs_btn) {
+        const char *label_en = self->logs_visible ? "Hide logs" : "Show logs";
+        gtk_button_set_label(GTK_BUTTON(self->toggle_logs_btn),
+                             ui_tr((Language)self->language, label_en));
+    }
+    if (self->copy_logs_btn) {
+        gtk_widget_set_visible(self->copy_logs_btn, self->logs_visible);
+        const char *copy_en = self->copy_feedback_id != 0 ? "Copied" : "Copy logs";
+        gtk_button_set_label(GTK_BUTTON(self->copy_logs_btn),
+                             ui_tr((Language)self->language, copy_en));
+    }
+    if (self->log_scrolled) {
+        gtk_widget_set_visible(self->log_scrolled, self->logs_visible);
+    }
+    if (self->finished_top_spacer) {
+        gtk_widget_set_visible(self->finished_top_spacer, !self->logs_visible);
+    }
+    if (self->finished_bottom_spacer) {
+        gtk_widget_set_visible(self->finished_bottom_spacer, !self->logs_visible);
+    }
+}
+
+static void set_install_logs_visible(NekoStoreWindow *self, gboolean visible) {
+    self->logs_visible = visible;
+    update_logs_toggle_ui(self);
+    if (visible && self->log_view && self->log_end_mark) {
+        gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(self->log_view),
+                                     self->log_end_mark, 0.0, FALSE, 0.0, 1.0);
+    }
+}
+
+static void clear_install_logs(NekoStoreWindow *self) {
+    if (self->log_buffer) {
+        gtk_text_buffer_set_text(self->log_buffer, "", 0);
+    }
+}
+
+static void append_install_log(NekoStoreWindow *self, const char *line) {
+    if (!self->log_buffer || !line) return;
+
+    gboolean stick_to_bottom = TRUE;
+    if (self->log_scrolled && gtk_widget_get_visible(self->log_scrolled)) {
+        GtkAdjustment *vadj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(self->log_scrolled));
+        if (vadj) {
+            double value = gtk_adjustment_get_value(vadj);
+            double page_size = gtk_adjustment_get_page_size(vadj);
+            double upper = gtk_adjustment_get_upper(vadj);
+            stick_to_bottom = (upper <= page_size) || (value + page_size >= upper - 24.0);
+        }
+    }
+
+    char *clean = sanitize_log_line(line);
+    GtkTextIter end_iter;
+    gtk_text_buffer_get_end_iter(self->log_buffer, &end_iter);
+    if (gtk_text_buffer_get_char_count(self->log_buffer) > 0) {
+        gtk_text_buffer_insert(self->log_buffer, &end_iter, "\n", 1);
+    }
+    gtk_text_buffer_insert(self->log_buffer, &end_iter, clean, -1);
+    g_free(clean);
+
+    if (stick_to_bottom && self->logs_visible && self->log_view && self->log_end_mark) {
+        gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(self->log_view),
+                                     self->log_end_mark, 0.0, FALSE, 0.0, 1.0);
+    }
+}
+
+static void G_GNUC_PRINTF(2, 3) append_install_log_fmt(NekoStoreWindow *self, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    char *msg = g_strdup_vprintf(fmt, args);
+    va_end(args);
+    append_install_log(self, msg);
+    g_free(msg);
+}
+
+static void install_log_line_cb(const char *line, gpointer user_data) {
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    append_install_log(self, line);
+}
+
+static void on_toggle_logs_clicked(GtkButton *btn, gpointer user_data) {
+    (void)btn;
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    set_install_logs_visible(self, !self->logs_visible);
+}
+
+static gboolean reset_copy_logs_label_cb(gpointer user_data) {
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    self->copy_feedback_id = 0;
+    if (self->copy_logs_btn) {
+        gtk_button_set_label(GTK_BUTTON(self->copy_logs_btn),
+                             ui_tr((Language)self->language, "Copy logs"));
+    }
+    return G_SOURCE_REMOVE;
+}
+
+static void on_copy_logs_clicked(GtkButton *btn, gpointer user_data) {
+    (void)btn;
+    NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
+    if (!self->log_buffer) return;
+
+    GtkTextIter start, end;
+    if (!gtk_text_buffer_get_selection_bounds(self->log_buffer, &start, &end)) {
+        gtk_text_buffer_get_bounds(self->log_buffer, &start, &end);
+    }
+    char *text = gtk_text_buffer_get_text(self->log_buffer, &start, &end, FALSE);
+    GdkDisplay *display = gtk_widget_get_display(GTK_WIDGET(self));
+    if (display) {
+        GdkClipboard *clipboard = gdk_display_get_clipboard(display);
+        if (clipboard) {
+            gdk_clipboard_set_text(clipboard, text ? text : "");
+        }
+    }
+    g_free(text);
+
+    if (self->copy_feedback_id != 0) {
+        g_source_remove(self->copy_feedback_id);
+        self->copy_feedback_id = 0;
+    }
+    if (self->copy_logs_btn) {
+        gtk_button_set_label(GTK_BUTTON(self->copy_logs_btn),
+                             ui_tr((Language)self->language, "Copied"));
+    }
+    self->copy_feedback_id = g_timeout_add(1500, reset_copy_logs_label_cb, self);
+}
+
 static gboolean pulse_progress_bar(gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
     gtk_progress_bar_pulse(GTK_PROGRESS_BAR(self->progress_bar));
@@ -720,6 +905,10 @@ static void install_finished_cb(gboolean success, gpointer user_data) {
     if (self->current_installing) {
         AppInfo *info = (AppInfo *)self->current_installing->data;
         info->install_success = success;
+        if (success)
+            append_install_log_fmt(self, "==> %s installed successfully.", info->name);
+        else
+            append_install_log_fmt(self, "==> Failed to install %s.", info->name);
     }
 
     self->current_installing = self->current_installing->next;
@@ -736,8 +925,9 @@ static void install_next_app(NekoStoreWindow *self) {
         gtk_label_set_text(GTK_LABEL(self->status_label), status);
         g_free(status);
         term_log("Installing %s...", info->name);
+        append_install_log_fmt(self, "==> Installing %s (%d/%d)...", info->name, index + 1, total);
 
-        install_app_async(info->install_command, NULL, install_finished_cb, self);
+        install_app_async(info->install_command, install_log_line_cb, install_finished_cb, self);
     } else {
         self->installing = FALSE;
         stop_progress(self);
@@ -753,12 +943,14 @@ static void install_next_app(NekoStoreWindow *self) {
         if (has_failures) {
             g_print("\n");
             term_log("Some selected items could not be installed:");
+            append_install_log(self, "Some selected items could not be installed:");
             const char *failure_prefix = ui_tr((Language)self->language, "Could not install: ");
             GString *failure_summary = g_string_new(failure_prefix);
             for (GList *l = failed; l != NULL; l = l->next) {
                 AppInfo *info = (AppInfo *)l->data;
                 g_print("  - %s\n", info->name);
                 fflush(stdout);
+                append_install_log_fmt(self, "  - %s", info->name);
                 if (failure_summary->len > strlen(failure_prefix))
                     g_string_append(failure_summary, ", ");
                 g_string_append(failure_summary, info->name);
@@ -768,9 +960,11 @@ static void install_next_app(NekoStoreWindow *self) {
             g_list_free(failed);
         } else {
             term_log("All selected items installed successfully.");
+            append_install_log(self, "All selected items installed successfully.");
         }
         if (has_failures) {
             gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, "Installation finished with errors"));
+            set_install_logs_visible(self, TRUE);
         } else {
             term_log("Neko Wizard is ready! You can close this window.");
             gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, "Installation complete"));
@@ -784,8 +978,12 @@ static void system_update_finished_cb(gboolean success, gpointer user_data) {
     NekoStoreWindow *self = NEKO_STORE_WINDOW(user_data);
     self->installing = FALSE;
     stop_progress(self);
+    append_install_log(self, success ? "==> System update completed successfully." : "==> System update failed.");
     gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, success ? "System update complete" : "System update failed"));
-    gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, success ? "The update command finished successfully." : "Check the output above for details, then try again."));
+    gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, success ? "The update command finished successfully." : "Check the logs below for details, then try again."));
+    if (!success) {
+        set_install_logs_visible(self, TRUE);
+    }
     gtk_widget_set_visible(self->finished_back_btn, TRUE);
 }
 
@@ -800,11 +998,16 @@ static void on_update_system_clicked(GtkButton *btn, gpointer user_data) {
     self->finished_return_page_name = g_strdup(current_page ? current_page : "first_steps");
     self->installing = TRUE;
     gtk_widget_set_visible(self->finished_back_btn, FALSE);
+    clear_install_logs(self);
+    if (self->log_actions_box)
+        gtk_widget_set_visible(self->log_actions_box, TRUE);
+    update_logs_toggle_ui(self);
+    append_install_log(self, "$ pkexec xbps-install -y -Syu");
     gtk_stack_set_visible_child(GTK_STACK(self->stack), self->finished_page);
     gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, "Updating system…"));
     gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, "Running xbps-install -Syu"));
     start_progress(self);
-    install_app_async("pkexec xbps-install -y -Syu", NULL, system_update_finished_cb, self);
+    install_app_async("pkexec xbps-install -y -Syu", install_log_line_cb, system_update_finished_cb, self);
 }
 
 static void on_install_selected_clicked(GtkButton *btn, gpointer user_data) {
@@ -845,19 +1048,28 @@ static void on_install_selected_clicked(GtkButton *btn, gpointer user_data) {
     if (self->apps_to_install == NULL) {
         self->installing = FALSE;
         gtk_widget_set_visible(self->progress_bar, FALSE);
+        if (self->log_actions_box)
+            gtk_widget_set_visible(self->log_actions_box, FALSE);
+        set_install_logs_visible(self, FALSE);
         gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, "Nothing selected"));
         gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, "Choose at least one item to install."));
         gtk_widget_set_visible(self->finished_back_btn, TRUE);
         gtk_stack_set_visible_child(GTK_STACK(self->stack), self->finished_page);
         return;
     }
+    clear_install_logs(self);
+    if (self->log_actions_box)
+        gtk_widget_set_visible(self->log_actions_box, TRUE);
+    update_logs_toggle_ui(self);
     gtk_label_set_text(GTK_LABEL(self->finished_label), ui_tr((Language)self->language, "Installing selected items…"));
     start_progress(self);
 
     self->current_installing = self->apps_to_install;
     gtk_label_set_text(GTK_LABEL(self->status_label), ui_tr((Language)self->language, "Preparing selected packages…"));
     g_print("\n");
-    term_log("Installing %d selected item(s)...", g_list_length(self->apps_to_install));
+    guint count = g_list_length(self->apps_to_install);
+    term_log("Installing %u selected item(s)...", count);
+    append_install_log_fmt(self, "Installing %u selected item(s)...", count);
     gtk_stack_set_visible_child(GTK_STACK(self->stack), self->finished_page);
     install_next_app(self);
 }
@@ -1026,6 +1238,7 @@ static void update_language(NekoStoreWindow *self, Language lang) {
         const char *source = g_object_get_data(G_OBJECT(dynamic_labels[i]), "ui-status-source");
         if (source) gtk_label_set_text(GTK_LABEL(dynamic_labels[i]), ui_tr(lang, source));
     }
+    update_logs_toggle_ui(self);
     update_selection_count_labels(self);
 }
 
@@ -1667,40 +1880,102 @@ static void on_finished_back_clicked(GtkButton *btn, gpointer user_data) {
 
 static void build_finished_page(NekoStoreWindow *self) {
     self->finished_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_widget_set_valign(self->finished_page, GTK_ALIGN_CENTER);
-    gtk_widget_set_halign(self->finished_page, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(self->finished_page, GTK_ALIGN_FILL);
+    gtk_widget_set_halign(self->finished_page, GTK_ALIGN_FILL);
+    gtk_widget_set_hexpand(self->finished_page, TRUE);
+    gtk_widget_set_vexpand(self->finished_page, TRUE);
+    gtk_widget_set_margin_top(self->finished_page, PAGE_PAD);
+    gtk_widget_set_margin_bottom(self->finished_page, PAGE_PAD);
     gtk_widget_set_margin_start(self->finished_page, PAGE_PAD);
     gtk_widget_set_margin_end(self->finished_page, PAGE_PAD);
 
+    self->finished_top_spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_vexpand(self->finished_top_spacer, TRUE);
+
     self->finished_label = gtk_label_new("Installing Apps...");
     gtk_widget_add_css_class(self->finished_label, "page-header");
+    gtk_widget_set_halign(self->finished_label, GTK_ALIGN_CENTER);
     gtk_label_set_wrap(GTK_LABEL(self->finished_label), TRUE);
     gtk_label_set_justify(GTK_LABEL(self->finished_label), GTK_JUSTIFY_CENTER);
-    gtk_label_set_max_width_chars(GTK_LABEL(self->finished_label), 40);
+    gtk_label_set_max_width_chars(GTK_LABEL(self->finished_label), 48);
 
     self->progress_bar = gtk_progress_bar_new();
     gtk_widget_add_css_class(self->progress_bar, "install-progress");
-    gtk_widget_set_hexpand(self->progress_bar, TRUE);
-    gtk_widget_set_size_request(self->progress_bar, 320, -1);
-    gtk_widget_set_margin_top(self->progress_bar, 32);
+    gtk_widget_set_halign(self->progress_bar, GTK_ALIGN_CENTER);
+    gtk_widget_set_size_request(self->progress_bar, 380, -1);
+    gtk_widget_set_margin_top(self->progress_bar, 24);
 
     self->status_label = gtk_label_new("Preparing...");
     gtk_widget_add_css_class(self->status_label, "dim-label");
+    gtk_widget_set_halign(self->status_label, GTK_ALIGN_CENTER);
     gtk_widget_set_margin_top(self->status_label, 12);
     gtk_label_set_wrap(GTK_LABEL(self->status_label), TRUE);
-    gtk_label_set_max_width_chars(GTK_LABEL(self->status_label), 48);
+    gtk_label_set_justify(GTK_LABEL(self->status_label), GTK_JUSTIFY_CENTER);
+    gtk_label_set_max_width_chars(GTK_LABEL(self->status_label), 56);
 
-    gtk_box_append(GTK_BOX(self->finished_page), self->finished_label);
-    gtk_box_append(GTK_BOX(self->finished_page), self->progress_bar);
-    gtk_box_append(GTK_BOX(self->finished_page), self->status_label);
+    self->log_actions_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_widget_add_css_class(self->log_actions_box, "install-log-actions");
+    gtk_widget_set_halign(self->log_actions_box, GTK_ALIGN_CENTER);
+
+    self->toggle_logs_btn = gtk_button_new_with_label("Show logs");
+    gtk_widget_add_css_class(self->toggle_logs_btn, "logs-toggle-btn");
+    g_signal_connect(self->toggle_logs_btn, "clicked", G_CALLBACK(on_toggle_logs_clicked), self);
+    gtk_box_append(GTK_BOX(self->log_actions_box), self->toggle_logs_btn);
+
+    self->copy_logs_btn = gtk_button_new_with_label("Copy logs");
+    gtk_widget_add_css_class(self->copy_logs_btn, "logs-copy-btn");
+    gtk_widget_set_visible(self->copy_logs_btn, FALSE);
+    g_signal_connect(self->copy_logs_btn, "clicked", G_CALLBACK(on_copy_logs_clicked), self);
+    gtk_box_append(GTK_BOX(self->log_actions_box), self->copy_logs_btn);
+
+    self->log_view = gtk_text_view_new();
+    gtk_widget_add_css_class(self->log_view, "install-log-view");
+    gtk_text_view_set_editable(GTK_TEXT_VIEW(self->log_view), FALSE);
+    gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(self->log_view), TRUE);
+    gtk_text_view_set_monospace(GTK_TEXT_VIEW(self->log_view), TRUE);
+    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(self->log_view), GTK_WRAP_WORD_CHAR);
+    gtk_text_view_set_top_margin(GTK_TEXT_VIEW(self->log_view), 10);
+    gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(self->log_view), 10);
+    gtk_text_view_set_left_margin(GTK_TEXT_VIEW(self->log_view), 12);
+    gtk_text_view_set_right_margin(GTK_TEXT_VIEW(self->log_view), 12);
+
+    self->log_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(self->log_view));
+    GtkTextIter end_iter;
+    gtk_text_buffer_get_end_iter(self->log_buffer, &end_iter);
+    self->log_end_mark = gtk_text_buffer_create_mark(self->log_buffer, "end", &end_iter, FALSE);
+
+    self->log_scrolled = gtk_scrolled_window_new();
+    gtk_widget_add_css_class(self->log_scrolled, "install-log-scroll");
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(self->log_scrolled),
+                                   GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(self->log_scrolled), 240);
+    gtk_widget_set_hexpand(self->log_scrolled, TRUE);
+    gtk_widget_set_vexpand(self->log_scrolled, TRUE);
+    gtk_widget_set_margin_top(self->log_scrolled, 12);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(self->log_scrolled), self->log_view);
+
     self->finished_back_btn = gtk_button_new_with_label("Back");
     bind_ui_text(self, self->finished_back_btn, "Back", UI_BUTTON);
     gtk_widget_add_css_class(self->finished_back_btn, "suggested-action");
     gtk_widget_set_halign(self->finished_back_btn, GTK_ALIGN_CENTER);
-    gtk_widget_set_margin_top(self->finished_back_btn, 20);
+    gtk_widget_set_margin_top(self->finished_back_btn, 16);
     gtk_widget_set_visible(self->finished_back_btn, FALSE);
     g_signal_connect(self->finished_back_btn, "clicked", G_CALLBACK(on_finished_back_clicked), self);
+
+    self->finished_bottom_spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_vexpand(self->finished_bottom_spacer, TRUE);
+
+    gtk_box_append(GTK_BOX(self->finished_page), self->finished_top_spacer);
+    gtk_box_append(GTK_BOX(self->finished_page), self->finished_label);
+    gtk_box_append(GTK_BOX(self->finished_page), self->progress_bar);
+    gtk_box_append(GTK_BOX(self->finished_page), self->status_label);
+    gtk_box_append(GTK_BOX(self->finished_page), self->log_actions_box);
+    gtk_box_append(GTK_BOX(self->finished_page), self->log_scrolled);
     gtk_box_append(GTK_BOX(self->finished_page), self->finished_back_btn);
+    gtk_box_append(GTK_BOX(self->finished_page), self->finished_bottom_spacer);
+
+    self->logs_visible = FALSE;
+    update_logs_toggle_ui(self);
 }
 
 static void on_mirror_selected(GtkCheckButton *btn, gpointer user_data) {
@@ -1986,6 +2261,10 @@ static void neko_store_window_dispose(GObject *object) {
     if (self->pulse_id != 0) {
         g_source_remove(self->pulse_id);
         self->pulse_id = 0;
+    }
+    if (self->copy_feedback_id != 0) {
+        g_source_remove(self->copy_feedback_id);
+        self->copy_feedback_id = 0;
     }
     if (self->apps_to_install) {
         g_list_free(self->apps_to_install);

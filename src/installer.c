@@ -9,6 +9,7 @@ typedef struct {
     GSubprocess *subprocess;
     GDataInputStream *stream;
     GCancellable *cancellable;
+    guint drain_timeout_id;
     gboolean wait_done;
     gboolean stream_done;
     gboolean exit_success;
@@ -21,6 +22,11 @@ typedef struct {
 static void maybe_finish(InstallTask *task) {
     if (!task->wait_done || !task->stream_done) return;
 
+    if (task->drain_timeout_id != 0) {
+        g_source_remove(task->drain_timeout_id);
+        task->drain_timeout_id = 0;
+    }
+
     if (task->finished_cb) {
         task->finished_cb(task->exit_success, task->user_data);
     }
@@ -28,6 +34,15 @@ static void maybe_finish(InstallTask *task) {
     g_clear_object(&task->stream);
     g_clear_object(&task->subprocess);
     g_free(task);
+}
+
+static gboolean cancel_pending_read_cb(gpointer user_data) {
+    InstallTask *task = user_data;
+    task->drain_timeout_id = 0;
+    if (!task->stream_done && task->cancellable) {
+        g_cancellable_cancel(task->cancellable);
+    }
+    return G_SOURCE_REMOVE;
 }
 
 static void on_line_read(GObject *source_object, GAsyncResult *res, gpointer user_data) {
@@ -72,8 +87,11 @@ static void on_process_finished(GObject *source_object, GAsyncResult *res, gpoin
 
     task->exit_success = success;
     task->wait_done = TRUE;
-    // Stop any still-pending line read so stream_done can complete.
-    g_cancellable_cancel(task->cancellable);
+    // Allow any final buffered output lines to drain naturally to EOF; only
+    // cancel the stream read if a lingering child keeps stdout open.
+    if (!task->stream_done && task->drain_timeout_id == 0) {
+        task->drain_timeout_id = g_timeout_add(500, cancel_pending_read_cb, task);
+    }
     maybe_finish(task);
 }
 
@@ -91,6 +109,11 @@ void install_app_async(const char *command, InstallProgressCallback progress_cb,
 
     if (error) {
         g_warning("Could not launch subprocess: %s", error->message);
+        if (progress_cb) {
+            char *msg = g_strdup_printf("Could not launch subprocess: %s", error->message);
+            progress_cb(msg, user_data);
+            g_free(msg);
+        }
         g_clear_error(&error);
         if (finished_cb) finished_cb(FALSE, user_data);
         g_clear_object(&task->cancellable);
@@ -103,5 +126,5 @@ void install_app_async(const char *command, InstallProgressCallback progress_cb,
 
     g_data_input_stream_read_line_async(task->stream, G_PRIORITY_DEFAULT,
                                         task->cancellable, on_line_read, task);
-    g_subprocess_wait_async(task->subprocess, task->cancellable, on_process_finished, task);
+    g_subprocess_wait_async(task->subprocess, NULL, on_process_finished, task);
 }

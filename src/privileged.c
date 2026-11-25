@@ -24,6 +24,10 @@ static const char *DAEMON_SCRIPT =
     "umask 022\n"
     ": > \"$R/ready\"\n"
     "( cat \"$R/keepalive\" >/dev/null 2>&1; kill -TERM $$ 2>/dev/null ) &\n"
+    "USE_STDBUF=0\n"
+    "if command -v stdbuf >/dev/null 2>&1 && stdbuf -oL true 2>/dev/null; then\n"
+    "    USE_STDBUF=1\n"
+    "fi\n"
     "while true; do\n"
     "    if IFS= read -r line < \"$R/in\"; then\n"
     "        id=\"${line%% *}\"\n"
@@ -33,13 +37,20 @@ static const char *DAEMON_SCRIPT =
     "        out=\"$R/out.$id\"\n"
     "        rc=\"$R/rc.$id\"\n"
     "        rm -f \"$rc\"\n"
-    "        bash -c \"$cmd\" > \"$out\" 2>&1\n"
-    "        printf '%s\\n' \"$?\" > \"$rc\"\n"
+    "        if [ \"$USE_STDBUF\" -eq 1 ]; then\n"
+    "            stdbuf -oL -eL bash -c \"$cmd\" > \"$out\" 2>&1\n"
+    "            status=$?\n"
+    "        else\n"
+    "            bash -c \"$cmd\" > \"$out\" 2>&1\n"
+    "            status=$?\n"
+    "        fi\n"
+    "        printf '%s\\n' \"$status\" > \"$rc.tmp\" && mv -f \"$rc.tmp\" \"$rc\"\n"
     "    fi\n"
     "done\n";
 
 /* Runs as the user, in place of pkexec. Forwards to the persistent session when
- * it is ready, otherwise falls back to the real pkexec (one-off prompt). */
+ * it is ready, otherwise falls back to the real pkexec (one-off prompt). Uses a
+ * per-request FIFO so stdout/stderr stream to the caller in real time. */
 static char *build_shim(const char *real_pkexec) {
     return g_strdup_printf(
         "#!/usr/bin/env bash\n"
@@ -51,11 +62,21 @@ static char *build_shim(const char *real_pkexec) {
         "cmd=$(printf '%%q ' \"$@\")\n"
         "b64=$(printf '%%s' \"$cmd\" | base64 -w0)\n"
         "rm -f \"$R/rc.$id\" \"$R/out.$id\"\n"
-        "printf '%%s %%s\\n' \"$id\" \"$b64\" > \"$R/in\"\n"
-        "while [ ! -f \"$R/rc.$id\" ]; do\n"
-        "    sleep 0.1\n"
-        "done\n"
-        "cat \"$R/out.$id\" 2>/dev/null\n"
+        "if mkfifo -m 0600 \"$R/out.$id\" 2>/dev/null; then\n"
+        "    cat \"$R/out.$id\" &\n"
+        "    cat_pid=$!\n"
+        "    printf '%%s %%s\\n' \"$id\" \"$b64\" > \"$R/in\"\n"
+        "    wait \"$cat_pid\" 2>/dev/null\n"
+        "    while [ ! -f \"$R/rc.$id\" ]; do\n"
+        "        sleep 0.05\n"
+        "    done\n"
+        "else\n"
+        "    printf '%%s %%s\\n' \"$id\" \"$b64\" > \"$R/in\"\n"
+        "    while [ ! -f \"$R/rc.$id\" ]; do\n"
+        "        sleep 0.1\n"
+        "    done\n"
+        "    cat \"$R/out.$id\" 2>/dev/null\n"
+        "fi\n"
         "rc=$(cat \"$R/rc.$id\" 2>/dev/null)\n"
         "rm -f \"$R/out.$id\" \"$R/rc.$id\"\n"
         "exit \"${rc:-1}\"\n",

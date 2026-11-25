@@ -1138,6 +1138,63 @@ progressbar progress {
     margin-top: 8px;
 }
 
+/* --- Installation real-time terminal logs --------------------------------- */
+
+.install-log-actions {
+    margin-top: 16px;
+}
+
+button.logs-toggle-btn,
+button.logs-copy-btn {
+    min-height: 34px;
+    padding: 4px 14px;
+    font-size: 0.9em;
+    font-weight: 500;
+    background-color: @surface;
+    color: @text_soft;
+    border: 1px solid @border;
+    border-radius: 0;
+    transition: none;
+}
+
+button.logs-toggle-btn:hover,
+button.logs-copy-btn:hover {
+    background-color: @surface_hi;
+    border-color: @border_hi;
+    color: @text;
+}
+
+button.logs-toggle-btn:active,
+button.logs-copy-btn:active {
+    background-color: @border;
+    color: @text;
+}
+
+.install-log-scroll {
+    background-color: mix(@bg, #000000, 0.28);
+    border: 1px solid @border;
+    border-radius: 0;
+}
+
+textview.install-log-view {
+    background-color: mix(@bg, #000000, 0.28);
+    color: @text;
+    font-family: 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', monospace;
+    font-size: 0.86em;
+    line-height: 1.45;
+}
+
+textview.install-log-view > text {
+    background-color: mix(@bg, #000000, 0.28);
+    color: @text;
+    caret-color: @accent;
+}
+
+textview.install-log-view > text > selection {
+    background-color: @accent;
+    color: @on_accent;
+}
+
 /* --- Empty and loading states -------------------------------------------- */
 
 .empty-state {
